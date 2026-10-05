@@ -39,6 +39,7 @@ from app.models.schemas import (
 from app.services.ai_provider import AIProvider
 from app.services.ai.usage import AIUsageContext, AIUsageRecorder
 from app.services.cache import FileCache
+from app.services.store.base import Store
 from app.services.chunking import chunk_segments
 from app.services.metrics import Metrics
 from app.services.metrics import metrics as global_metrics
@@ -95,12 +96,14 @@ class VideoService:
         ai_provider: AIProvider,
         metrics: Metrics | None = None,
         usage_recorder: AIUsageRecorder | None = None,
+        store: Store | None = None,
     ) -> None:
         self.settings = settings
         self.cache = cache
         self.transcript_provider = transcript_provider
         self.ai_provider = ai_provider
         self.usage_recorder = usage_recorder or AIUsageRecorder()
+        self.store = store
         self.reader = AIReader(ai_provider, settings, usage_recorder=self.usage_recorder)
         self.metrics = metrics or global_metrics
         self.jobs: dict[str, Job] = {}
@@ -282,6 +285,8 @@ class VideoService:
 
         if not force:
             cached = self._load_cached_state(video_id)
+            if not cached and await self._hydrate_from_store(video_id):
+                cached = self._load_cached_state(video_id)
             if cached:
                 logger.info("[cache] hit video=%s", video_id)
                 self.metrics.record_video(cached=True)
@@ -320,6 +325,62 @@ class VideoService:
         return self.cache.read_json(video_id, "transcript") is not None and bool(
             self.cache.read_json(video_id, "chunks")
         )
+
+    # --------------------------------------------------------- persistence
+
+    async def _persist_video(
+        self,
+        video_id: str,
+        *,
+        status: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        transcript: dict[str, Any] | None = None,
+        chunks: list[dict[str, Any]] | None = None,
+        analysis: dict[str, Any] | None = None,
+    ) -> None:
+        """Write the canonical video bundle to the authoritative store."""
+        if self.store is None:
+            return
+        try:
+            await self.store.save_video(
+                video_id,
+                status=status,
+                metadata=metadata,
+                transcript=transcript,
+                chunks=chunks,
+                analysis=analysis,
+            )
+        except Exception:  # noqa: BLE001 - persistence must not break processing
+            logger.warning("[store] failed to persist video=%s", video_id, exc_info=True)
+
+    async def _hydrate_from_store(self, video_id: str) -> bool:
+        """Populate the local cache from the canonical store on a cache miss."""
+        if self.store is None:
+            return False
+        try:
+            bundle = await self.store.load_video(video_id)
+        except Exception:  # noqa: BLE001
+            logger.warning("[store] failed to load video=%s", video_id, exc_info=True)
+            return False
+        if not bundle:
+            return False
+        if bundle.get("metadata"):
+            self.cache.write_json(video_id, "metadata", bundle["metadata"])
+        if bundle.get("transcript"):
+            self.cache.write_json(video_id, "transcript", bundle["transcript"])
+        if bundle.get("chunks"):
+            self.cache.write_json(video_id, "chunks", bundle["chunks"])
+        if bundle.get("transcript_source"):
+            self.cache.write_json(video_id, "transcript_source", bundle["transcript_source"])
+        if bundle.get("analysis"):
+            self.cache.write_json(
+                video_id,
+                "analysis",
+                {"analysis": bundle["analysis"], "generated_at": datetime.now(timezone.utc).isoformat()},
+            )
+        if bundle.get("analysis_quick_read"):
+            self.cache.write_json(video_id, "analysis_quick_read", bundle["analysis_quick_read"])
+        return bool(bundle.get("metadata") and bundle.get("transcript"))
 
     async def _ensure_transcript(
         self, video_id: str, force: bool, stage: Any
@@ -511,6 +572,13 @@ class VideoService:
                 job.stage_message = STAGE_MESSAGES["chat_ready"]
                 job.analysis_status = "pending"
                 self.metrics.record_video(cached=False)
+                await self._persist_video(
+                    video_id,
+                    status="transcript_ready",
+                    metadata=meta.model_dump(),
+                    transcript={**transcript.model_dump(), "source": "server_ytdlp"},
+                    chunks=[chunk.model_dump() for chunk in chunks],
+                )
                 logger.info(
                     "[video] chat ready id=%s transcript=%dc chunks=%d fetched=%s fetch_time=%.1fs",
                     video_id,
@@ -555,6 +623,7 @@ class VideoService:
                 job.stage = "ready"
                 job.stage_message = STAGE_MESSAGES["ready"]
                 job.finished_at = time.monotonic()
+                await self._persist_video(video_id, analysis=analysis.model_dump())
                 self._emit(video_id, {"type": "done", "analysis_status": job.analysis_status})
                 logger.info(
                     "[video] guide ready id=%s degraded=%s duration=%.1fs",
@@ -704,14 +773,23 @@ class VideoService:
         self.cache.write_json(video_id, "metadata", meta.model_dump())
         self.cache.write_json(video_id, "transcript", transcript.model_dump())
         self.cache.write_json(video_id, "chunks", [chunk.model_dump() for chunk in chunks])
+        source = request.method if request.method in ("browser_intercept", "caption_dom") else "client"
         self.cache.write_json(
             video_id,
             "transcript_source",
-            {"source": "client", "verified": False},
+            {"source": source, "verified": False},
+        )
+        await self._persist_video(
+            video_id,
+            status="transcript_ready",
+            metadata=meta.model_dump(),
+            transcript={**transcript.model_dump(), "source": source},
+            chunks=[chunk.model_dump() for chunk in chunks],
         )
         logger.info(
-            "[ingest] client transcript id=%s segments=%d chars=%d lang=%s",
+            "[ingest] client transcript id=%s source=%s segments=%d chars=%d lang=%s",
             video_id,
+            source,
             len(segments),
             char_count,
             request.language,

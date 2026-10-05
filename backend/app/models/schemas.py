@@ -145,6 +145,8 @@ class IngestRequest(BaseModel):
     format: Literal["json3", "segments"] = "json3"
     content: str | None = Field(default=None, max_length=5_000_000)
     segments: list[TranscriptSegment] | None = Field(default=None, max_length=20_000)
+    # Acquisition method, for observability: browser_intercept | caption_dom | client.
+    method: str | None = Field(default=None, max_length=40)
 
 
 # -------------------------------------------------------------------- chat

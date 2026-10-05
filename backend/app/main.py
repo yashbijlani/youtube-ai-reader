@@ -17,8 +17,10 @@ from app.config import Settings, get_settings
 from app.errors import AppError
 from app.logging_conf import configure_logging
 from app.services.ai import create_provider
+from app.services.ai.usage import AIUsageRecorder
 from app.services.cache import FileCache
 from app.services.rate_limit import limiter
+from app.services.store import create_store
 from app.services.transcript import YtDlpTranscriptProvider
 from app.services.usage import UsageStore
 from app.services.video_service import VideoService
@@ -35,21 +37,30 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         settings.cache_dir.mkdir(parents=True, exist_ok=True)
     ai_provider = create_provider(settings)
     transcript_provider = YtDlpTranscriptProvider(settings)
+    store = create_store(settings)
+
+    async def _usage_sink(record) -> None:  # noqa: ANN001
+        await store.save_ai_usage(record.to_row())
+
+    usage_recorder = AIUsageRecorder(sink=_usage_sink)
+    app.state.store = store
     app.state.video_service = VideoService(
-        settings, cache, transcript_provider, ai_provider
+        settings, cache, transcript_provider, ai_provider, usage_recorder=usage_recorder, store=store
     )
     app.state.usage_store = UsageStore(settings)
     logger.info(
-        "[startup] YouTube AI Reader %s model=%s ai_configured=%s cache=%s",
+        "[startup] YouTube AI Reader %s model=%s ai_configured=%s storage=%s cache=%s",
         API_VERSION,
-        settings.opencode_model,
+        settings.gemini_model_main,
         settings.ai_configured,
+        type(store).__name__,
         settings.cache_dir if settings.cache_enabled else "disabled",
     )
     try:
         yield
     finally:
         await app.state.video_service.aclose()
+        await store.aclose()
         limiter.prune()
         logger.info("[shutdown] bye")
 
