@@ -121,7 +121,8 @@ export const api = {
       language?: string;
       kind: "manual" | "auto";
       format: "json3" | "segments";
-      content: string;
+      content?: string;
+      segments?: Array<{ start: number; end: number; text: string }>;
     },
   ): Promise<VideoState> {
     return request<VideoState>(baseUrl, `/api/videos/${videoId}/ingest`, {

@@ -66,7 +66,7 @@ export function useVideoReader(
             type: "GET_CLIENT_TRANSCRIPT",
             videoId: video.videoId,
           });
-          if (client?.json3) {
+          if (client && (client.content || client.segments?.length)) {
             try {
               const next = await api.ingest(apiBaseUrl, video.videoId, {
                 title: video.title,
@@ -74,8 +74,9 @@ export function useVideoReader(
                 duration: video.duration,
                 language: client.language,
                 kind: client.kind,
-                format: "json3",
-                content: client.json3,
+                format: client.format,
+                content: client.content,
+                segments: client.segments,
               });
               setState(next);
               return;

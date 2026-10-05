@@ -67,9 +67,13 @@ const COLLECTOR = () => {
   return null;
 };
 
+/** Ignore absurd/abusive caption payloads (a transcript is never this large). */
+export const MAX_CAPTURE_BYTES = 8_000_000;
+
 const READ_CAPTURES = () => {
   const w = window as unknown as { __yairRnd?: RawCapture[] };
-  const caps = (w.__yairRnd || []).filter((c) => c && c.bytes > 0);
+  // 8_000_000 must match MAX_CAPTURE_BYTES (function body is serialized alone).
+  const caps = (w.__yairRnd || []).filter((c) => c && c.bytes > 0 && c.bytes <= 8_000_000);
   caps.sort((a, b) => b.bytes - a.bytes);
   return caps[0] || null;
 };
@@ -155,6 +159,21 @@ export class BrowserTranscriptProvider {
 
     return null;
   }
+}
+
+/** Map a result onto the extension's client-transcript payload shape. */
+export function toClientPayload(result: BrowserTranscriptResult, videoId = "") {
+  return {
+    videoId,
+    language: result.language ?? "en",
+    kind: result.captionTracks?.picked?.kind === "asr" ? ("auto" as const) : ("manual" as const),
+    format: result.json3 ? ("json3" as const) : ("segments" as const),
+    content: result.json3 ?? undefined,
+    segments: result.json3
+      ? undefined
+      : result.segments.map((s) => ({ start: s.start, end: s.end, text: s.text })),
+    method: result.method === "caption_dom" ? ("caption_dom" as const) : ("main_world_intercept" as const),
+  };
 }
 
 /** Build the existing backend `/api/videos/{id}/ingest` payload for a result. */

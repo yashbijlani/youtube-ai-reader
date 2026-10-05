@@ -154,7 +154,10 @@ export interface ClientTranscriptPayload {
   videoId: string;
   language: string;
   kind: "manual" | "auto";
-  json3: string;
+  format: "json3" | "segments";
+  content?: string;
+  segments?: Array<{ start: number; end: number; text: string }>;
+  method?: "main_world_intercept" | "caption_dom";
 }
 
 export type BackgroundToContent = { type: "SEEK_TO"; seconds: number };

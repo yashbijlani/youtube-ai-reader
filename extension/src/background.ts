@@ -1,6 +1,5 @@
 import { extpay } from "./lib/entitlement";
-import { pageInterceptor } from "./transcript-rnd/page-interceptor";
-import { triggerCaptionRequest } from "./transcript-rnd/methods";
+import { BrowserTranscriptProvider, toClientPayload } from "./transcript-rnd/browser-provider";
 import type {
   BackgroundBroadcast,
   ClientTranscriptPayload,
@@ -80,59 +79,34 @@ function broadcastPlaybackThrottled(): void {
 }
 
 /**
- * R&D-verified caption acquisition (Method C).
+ * Production browser transcript acquisition (R&D-verified).
  *
- * YouTube's own player fetches `/api/timedtext` with a proof-of-origin (`pot`)
- * token we cannot mint, so fetching the caption URL ourselves returns an empty
- * body. Instead we observe the response the player already received by patching
- * `XMLHttpRequest`/`fetch` in the page's MAIN world.
+ * Fallback chain:
+ *   1. MAIN-world interception of YouTube's own signed `/api/timedtext`
+ *      response (primary; full timestamps).
+ *   2. Rendered caption DOM capture (lossy, real-time).
+ * Server yt-dlp remains the caller's fallback when this returns null.
  *
- * 1. install the interceptor (captures any caption response body);
- * 2. turn captions on + play so the player issues a signed caption request;
- * 3. read the largest captured body back.
- *
- * Sentinel-verified: this path succeeds on ~98% of captioned videos.
+ * The interceptor is narrowly scoped to caption requests (see
+ * `transcript-rnd/page-interceptor.ts`); it never reads cookies, auth headers,
+ * request bodies, or unrelated traffic.
  */
-const READ_CAPTURED = (): string | null => {
-  const w = window as unknown as { __yairCaptured?: Array<{ bytes: number; text: string }> };
-  const caps = (w.__yairCaptured || []).filter((c) => c && c.bytes > 0);
-  caps.sort((a, b) => b.bytes - a.bytes);
-  return caps[0]?.text ?? null;
-};
+const browserProvider = new BrowserTranscriptProvider();
 
 async function extractClientTranscript(
   tabId: number,
 ): Promise<ClientTranscriptPayload | null> {
   try {
-    const token = `yair-${Math.random().toString(36).slice(2)}`;
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      world: "MAIN",
-      func: pageInterceptor as (...args: unknown[]) => unknown,
-      args: [{ token, source: "yair-rnd", patchFetch: true }],
+    const result = await browserProvider.extract(tabId, {
+      prefLang: "en",
+      interceptTimeoutMs: 20000,
+      domFallbackMs: 8000,
     });
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      world: "MAIN",
-      func: triggerCaptionRequest as (...args: unknown[]) => unknown,
-      args: ["en"],
-    });
-
-    // Poll for a captured caption body (the request fires shortly after play).
-    for (let attempt = 0; attempt < 40; attempt += 1) {
-      const results = await chrome.scripting.executeScript({
-        target: { tabId },
-        world: "MAIN",
-        func: READ_CAPTURED,
-      });
-      const json3 = results?.[0]?.result as string | null | undefined;
-      if (json3) {
-        return { videoId: "", language: "en", kind: "auto", json3 };
-      }
-      await new Promise((resolve) => setTimeout(resolve, 500));
+    if (!result) {
+      console.log("[yair] no browser caption response captured; server fallback will handle it");
+      return null;
     }
-    console.log("[yair] no browser caption response captured; will fall back to server");
-    return null;
+    return toClientPayload(result);
   } catch (error) {
     console.warn("[yair] client transcript extraction failed", error);
     return null;
@@ -148,7 +122,9 @@ async function storeClientTranscript(tabId: number, videoId: string): Promise<vo
     const all = (stored[TRANSCRIPTS_KEY] as Record<string, ClientTranscriptPayload>) ?? {};
     all[videoId] = payload;
     await chrome.storage.session.set({ [TRANSCRIPTS_KEY]: all });
-    console.log(`[yair] client transcript ready id=${videoId} (${payload.json3.length} chars)`);
+    console.log(
+      `[yair] client transcript ready id=${videoId} source=${payload.method ?? "unknown"} (${payload.content?.length ?? payload.segments?.length ?? 0} ${payload.format})`,
+    );
   } catch (error) {
     console.warn("[yair] storing client transcript failed", error);
   }
