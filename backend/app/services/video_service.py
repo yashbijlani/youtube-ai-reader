@@ -36,15 +36,15 @@ from app.models.schemas import (
     VideoMeta,
     VideoState,
 )
-from app.services.ai_provider import AIProvider
 from app.services.ai.usage import AIUsageContext, AIUsageRecorder
+from app.services.ai_provider import AIProvider
 from app.services.cache import FileCache
-from app.services.store.base import Store
 from app.services.chunking import chunk_segments
 from app.services.metrics import Metrics
 from app.services.metrics import metrics as global_metrics
 from app.services.reader import AIReader
 from app.services.retrieval import ChunkIndex
+from app.services.store.base import Store
 from app.services.subtitles import normalize_segments, parse_json3
 from app.services.transcript import TranscriptProvider
 from app.services.youtube import canonical_watch_url, extract_video_id

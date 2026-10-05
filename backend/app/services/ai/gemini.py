@@ -332,7 +332,6 @@ class GeminiProvider(AIProvider):
             max_tokens=max_tokens_for(rtype, self.settings, max_tokens),
             temperature=temperature if temperature is not None else temperature_for(rtype, self.settings),
         )
-        payload["generationConfig"]["maxOutputTokens"] = payload["generationConfig"]["maxOutputTokens"]
         request_id = str(uuid.uuid4())
         started = time.monotonic()
         prompt_tokens: int | None = None

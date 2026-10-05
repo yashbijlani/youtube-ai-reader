@@ -21,6 +21,8 @@ from app.services.ai import (
 )
 from app.services.ai.base import (
     classify_error as _classify_error,
+)
+from app.services.ai.base import (
     error_detail,
     error_detail_bytes,
     extract_error_message,

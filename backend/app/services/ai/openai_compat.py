@@ -235,7 +235,6 @@ class OpenAICompatibleProvider(AIProvider):
             "max_tokens": max_tokens_for(rtype, self.settings, max_tokens),
             "stream": True,
         }
-        input_chars = sum(len(m.get("content", "")) for m in messages)
         output_chars = 0
         started = time.monotonic()
         attempts = 0

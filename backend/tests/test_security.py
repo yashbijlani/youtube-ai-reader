@@ -5,9 +5,9 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from app.config import Settings
+from app.errors import InvalidYouTubeUrl
 from app.main import create_app
 from app.services.youtube import extract_video_id
-from app.errors import InvalidYouTubeUrl
 
 
 def _settings(tmp_path) -> Settings:
