@@ -56,6 +56,20 @@ def install_id(request: Request) -> str | None:
     return value.strip() if value else None
 
 
+def current_user_id(request: Request) -> str | None:
+    """Authenticated user id set by the auth dependency (Phase 4).
+
+    Falls back to the anonymous install id in development when auth is optional.
+    """
+    user_id = getattr(request.state, "user_id", None)
+    if user_id:
+        return str(user_id)
+    settings = get_settings(request)
+    if settings.auth_required:
+        return None
+    return install_id(request)
+
+
 def enforce_free_limit(request: Request, video_id: str) -> None:
     store = get_usage(request)
     allowed, remaining = store.can_process(install_id(request) or "", video_id)
@@ -90,7 +104,7 @@ async def health(request: Request) -> HealthResponse:
         status="ok",
         version=API_VERSION,
         ai_configured=settings.ai_configured,
-        model=settings.opencode_model,
+        model=settings.gemini_model_main,
         fast_model=settings.effective_fast_model,
     )
 
@@ -107,7 +121,9 @@ async def process_video(request: Request, payload: ProcessRequest) -> VideoState
     video_id = extract_video_id(payload.youtube_url)
     enforce_free_limit(request, video_id)
     service = get_service(request)
-    state = await service.process(payload.youtube_url, force=payload.force)
+    state = await service.process(
+        payload.youtube_url, force=payload.force, user_id=current_user_id(request)
+    )
     get_usage(request).record_video(install_id(request) or "", video_id)
     return state
 
@@ -141,7 +157,7 @@ async def ingest_transcript(request: Request, video_id: str, payload: IngestRequ
     await enforce_rate(request, "process", settings.rate_limit_process_per_hour, 3600)
     enforce_free_limit(request, video_id)
     service = get_service(request)
-    state = await service.ingest(video_id, payload)
+    state = await service.ingest(video_id, payload, user_id=current_user_id(request))
     get_usage(request).record_video(install_id(request) or "", video_id)
     return state
 
@@ -152,7 +168,7 @@ async def repair_video(request: Request, video_id: str) -> VideoState:
     validate_video_id(video_id)
     await enforce_rate(request, "process", settings.rate_limit_process_per_hour, 3600)
     service = get_service(request)
-    return await service.repair(video_id)
+    return await service.repair(video_id, user_id=current_user_id(request))
 
 
 @router.get("/videos/{video_id}/transcript", response_model=None)
@@ -174,7 +190,7 @@ async def reprocess_video(request: Request, video_id: str) -> VideoState:
     settings = get_settings(request)
     await enforce_rate(request, "process", settings.rate_limit_process_per_hour, 3600)
     service = get_service(request)
-    return await service.reprocess(validate_video_id(video_id))
+    return await service.reprocess(validate_video_id(video_id), user_id=current_user_id(request))
 
 
 @router.post("/videos/{video_id}/cancel")
@@ -191,7 +207,7 @@ async def summarize(request: Request, video_id: str):
     await enforce_rate(request, "chat", settings.rate_limit_chat_per_hour, 3600)
     service = get_service(request)
 
-    generator = service.stream_summary(video_id)
+    generator = service.stream_summary(video_id, user_id=current_user_id(request))
     first_event: dict | None = None
     try:
         first_event = await generator.__anext__()
@@ -284,9 +300,9 @@ async def chat(request: Request, video_id: str, payload: ChatRequest):
     service = get_service(request)
 
     if not payload.stream:
-        return await service.chat(video_id, payload)
+        return await service.chat(video_id, payload, user_id=current_user_id(request))
 
-    generator = service.stream_chat(video_id, payload)
+    generator = service.stream_chat(video_id, payload, user_id=current_user_id(request))
     first_event: dict | None = None
     try:
         first_event = await generator.__anext__()
@@ -298,7 +314,7 @@ async def chat(request: Request, video_id: str, payload: ChatRequest):
     except Exception:  # noqa: BLE001 - fall back to the non-streaming path
         logger.warning("[chat] streaming unavailable, falling back id=%s", video_id)
         await generator.aclose()
-        return await service.chat(video_id, payload)
+        return await service.chat(video_id, payload, user_id=current_user_id(request))
 
     async def event_stream() -> AsyncIterator[str]:
         if first_event is not None:

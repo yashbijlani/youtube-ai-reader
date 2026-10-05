@@ -77,6 +77,7 @@ class ScriptedAIProvider(AIProvider):
         self.fail = fail
         self.calls: list[str] = []
         self.models: list[str | None] = []
+        self.request_types: list[str | None] = []
 
     def _kind(self, messages: list[dict[str, str]]) -> str:
         system = messages[0]["content"]
@@ -102,6 +103,8 @@ class ScriptedAIProvider(AIProvider):
         max_tokens: int | None = None,
         temperature: float | None = None,
         model: str | None = None,
+        request_type: object | None = None,
+        on_usage: object | None = None,
     ) -> CompletionResult:
         if self.fail:
             from app.errors import AIProviderError
@@ -110,6 +113,7 @@ class ScriptedAIProvider(AIProvider):
         kind = self._kind(messages)
         self.calls.append(kind)
         self.models.append(model)
+        self.request_types.append(getattr(request_type, "value", request_type))
         if self.broken_json and kind in ("overview", "chapters", "chat"):
             text = "I'm sorry, I cannot produce JSON right now. {broken"
         elif kind == "notes":
@@ -177,6 +181,8 @@ class ScriptedAIProvider(AIProvider):
         max_tokens: int | None = None,
         temperature: float | None = None,
         model: str | None = None,
+        request_type: object | None = None,
+        on_usage: object | None = None,
     ) -> AsyncIterator[str]:
         if self.fail:
             from app.errors import AIProviderError
@@ -184,6 +190,7 @@ class ScriptedAIProvider(AIProvider):
             raise AIProviderError("scripted failure")
         self.calls.append("chat-stream")
         self.models.append(model)
+        self.request_types.append(getattr(request_type, "value", request_type))
         for piece in ["The speaker ", "argues AI ", "makes code cheap [0:08]."]:
             yield piece
 
@@ -214,8 +221,8 @@ class PreflightFailProvider(ScriptedAIProvider):
 
 @pytest.fixture()
 def settings(tmp_path, monkeypatch) -> Settings:
-    monkeypatch.setenv("OPENCODE_API_KEY", "test-key")
-    monkeypatch.setenv("OPENCODE_MODEL", "scripted-test-model")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setenv("GEMINI_MODEL_MAIN", "scripted-test-model")
     monkeypatch.setenv("DATA_DIR", str(tmp_path))
     monkeypatch.setenv("CACHE_ENABLED", "true")
     monkeypatch.setenv("LOG_LEVEL", "WARNING")

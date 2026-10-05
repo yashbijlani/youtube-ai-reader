@@ -203,6 +203,9 @@ class StatsResponse(BaseModel):
     ai_errors: int = 0
     ai_input_chars: int = 0
     ai_output_chars: int = 0
+    ai_input_tokens: int = 0
+    ai_output_tokens: int = 0
+    ai_cost_usd: float = 0.0
     chat_requests: int = 0
     chat_input_chars: int = 0
     chat_output_chars: int = 0

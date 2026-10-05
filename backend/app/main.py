@@ -16,7 +16,7 @@ from app.api.routes import API_VERSION, router
 from app.config import Settings, get_settings
 from app.errors import AppError
 from app.logging_conf import configure_logging
-from app.services.ai_provider import OpenAICompatibleProvider
+from app.services.ai import create_provider
 from app.services.cache import FileCache
 from app.services.rate_limit import limiter
 from app.services.transcript import YtDlpTranscriptProvider
@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     cache = FileCache(settings)
     if settings.cache_enabled:
         settings.cache_dir.mkdir(parents=True, exist_ok=True)
-    ai_provider = OpenAICompatibleProvider(settings)
+    ai_provider = create_provider(settings)
     transcript_provider = YtDlpTranscriptProvider(settings)
     app.state.video_service = VideoService(
         settings, cache, transcript_provider, ai_provider

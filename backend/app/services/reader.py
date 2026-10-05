@@ -27,7 +27,8 @@ from app.models.schemas import (
     VideoMeta,
 )
 from app.services import prompts
-from app.services.ai_provider import AIProvider, CompletionResult, extract_json
+from app.services.ai import AIProvider, AIRequestType, CompletionResult, extract_json
+from app.services.ai.usage import AIUsageContext, AIUsageRecorder
 from app.services.retrieval import ChunkIndex
 from app.utils.text import truncate
 from app.utils.timestamps import format_timestamp, parse_timestamp
@@ -198,25 +199,47 @@ def compact_context(
 class AIReader:
     """High-level reading tasks composed from an ``AIProvider``."""
 
-    def __init__(self, provider: AIProvider, settings: Settings) -> None:
+    def __init__(
+        self,
+        provider: AIProvider,
+        settings: Settings,
+        usage_recorder: AIUsageRecorder | None = None,
+    ) -> None:
         self.provider = provider
         self.settings = settings
-        self.fast_model: str | None = settings.opencode_fast_model or None
+        self.usage_recorder = usage_recorder
+        self.fast_model: str | None = settings.gemini_model_fast or None
 
     # ------------------------------------------------------------ helpers
+
+    def _usage_callback(self, context: AIUsageContext | None):
+        if self.usage_recorder is None or context is None:
+            return None
+
+        def callback(event) -> None:  # noqa: ANN001
+            self.usage_recorder.record(
+                event, user_id=context.user_id, video_id=context.video_id
+            )
+
+        return callback
 
     async def _complete_json(
         self,
         messages: list[dict[str, str]],
         *,
         max_tokens: int | None = None,
-        model: str | None = None,
+        request_type: AIRequestType = AIRequestType.CHAT_COMPLEX,
+        context: AIUsageContext | None = None,
     ) -> tuple[dict[str, Any], CompletionResult]:
         attempt_messages = list(messages)
         last_error: Exception | None = None
         for attempt in range(2):
             result = await self.provider.complete(
-                attempt_messages, json_mode=True, max_tokens=max_tokens, model=model
+                attempt_messages,
+                json_mode=True,
+                max_tokens=max_tokens,
+                request_type=request_type,
+                on_usage=self._usage_callback(context),
             )
             try:
                 return extract_json(result.text), result
@@ -245,10 +268,14 @@ class AIReader:
         context: str,
         *,
         duration: float | None = None,
-        model: str | None = None,
+        request_type: AIRequestType = AIRequestType.ANALYSIS,
+        usage_context: AIUsageContext | None = None,
     ) -> tuple[str, list[KeyPoint], CompletionResult]:
         payload, result = await self._complete_json(
-            prompts.overview_prompt(meta, context), max_tokens=6000, model=model
+            prompts.overview_prompt(meta, context),
+            max_tokens=6000,
+            request_type=request_type,
+            context=usage_context,
         )
         overview = str(payload.get("overview") or "").strip()
         overview = overview.strip()
@@ -266,10 +293,14 @@ class AIReader:
         context: str,
         *,
         duration: float | None = None,
-        model: str | None = None,
+        request_type: AIRequestType = AIRequestType.ANALYSIS,
+        usage_context: AIUsageContext | None = None,
     ) -> tuple[list[Chapter], CompletionResult]:
         payload, result = await self._complete_json(
-            prompts.chapters_prompt(meta, context, duration), max_tokens=5000, model=model
+            prompts.chapters_prompt(meta, context, duration),
+            max_tokens=5000,
+            request_type=request_type,
+            context=usage_context,
         )
         chapters = coerce_chapters(
             payload.get("chapters") or payload.get("sections") or [],
@@ -284,13 +315,14 @@ class AIReader:
         *,
         section_label: str | None = None,
         target_words: int = 900,
-        model: str | None = None,
         outline: str | None = None,
+        usage_context: AIUsageContext | None = None,
     ) -> tuple[str, CompletionResult]:
         result = await self.provider.complete(
             prompts.reading_prompt(meta, context, section_label, target_words, outline),
             max_tokens=6000,
-            model=model,
+            request_type=AIRequestType.GUIDE,
+            on_usage=self._usage_callback(usage_context),
         )
         text = result.text.strip()
         if not text:
@@ -304,6 +336,7 @@ class AIReader:
         meta: VideoMeta,
         chunks: list[TranscriptChunk],
         total_chars: int,
+        usage_context: AIUsageContext | None = None,
         on_stage: StageCallback | None = None,
         on_overview: Callable[[str, list[KeyPoint]], None] | None = None,
         on_chapters: Callable[[list[Chapter]], None] | None = None,
@@ -360,7 +393,10 @@ class AIReader:
         async def quick_read_call() -> str:
             buffer: list[str] = []
             async for piece in self.provider.stream(
-                prompts.summary_prompt(meta, context), max_tokens=900, model=self.fast_model
+                prompts.summary_prompt(meta, context),
+                max_tokens=900,
+                request_type=AIRequestType.SUMMARY,
+                on_usage=self._usage_callback(usage_context),
             ):
                 buffer.append(piece)
                 if on_quick_read_delta:
@@ -382,7 +418,7 @@ class AIReader:
             overview_text, key_points, _ = await attempt(
                 "overview",
                 lambda: self.generate_summary(
-                    meta, context, duration=duration, model=self.fast_model
+                    meta, context, duration=duration, usage_context=usage_context
                 ),
             )
         except (AIProviderError, AIOutputError) as exc:
@@ -409,7 +445,7 @@ class AIReader:
                 chapters, _ = await attempt(
                     "chapters",
                     lambda: self.generate_chapters(
-                        meta, context, duration=duration, model=self.fast_model
+                        meta, context, duration=duration, usage_context=usage_context
                     ),
                 )
             except (AIProviderError, AIOutputError) as exc:
@@ -430,6 +466,7 @@ class AIReader:
                     on_reading_delta=on_reading_delta,
                     on_reading_section=on_reading_section,
                     outline=outline,
+                    usage_context=usage_context,
                 )
             except (AIOutputError, AIProviderError) as exc:
                 logger.warning("[ai] reading failed: %s", exc)
@@ -468,6 +505,7 @@ class AIReader:
         on_reading_delta: Callable[[int, str], None] | None = None,
         on_reading_section: Callable[[int, str], None] | None = None,
         outline: str | None = None,
+        usage_context: AIUsageContext | None = None,
     ) -> str:
         """Write the detailed reading section by section, concurrently, streaming.
 
@@ -514,7 +552,12 @@ class AIReader:
                 buffer: list[str] = []
                 text = ""
                 try:
-                    async for piece in self.provider.stream(messages, max_tokens=6000):
+                    async for piece in self.provider.stream(
+                        messages,
+                        max_tokens=6000,
+                        request_type=AIRequestType.GUIDE,
+                        on_usage=self._usage_callback(usage_context),
+                    ):
                         buffer.append(piece)
                         if on_reading_delta:
                             on_reading_delta(index, piece)
@@ -541,6 +584,7 @@ class AIReader:
                             section_label=f"part {index + 1} of {len(sources)}",
                             target_words=target,
                             outline=outline,
+                            usage_context=usage_context,
                         )
                     except (AIProviderError, AIOutputError) as exc:
                         logger.warning("[ai] reading section %d failed: %s", index + 1, exc)
@@ -580,6 +624,7 @@ class AIReader:
         history: list[dict[str, str]] | None = None,
         current_time: float | None = None,
         top_k: int | None = None,
+        usage_context: AIUsageContext | None = None,
     ) -> tuple[str, list[ChatCitation], CompletionResult]:
         messages, used_chunks = self._chat_messages(
             meta,
@@ -592,7 +637,12 @@ class AIReader:
             streaming=False,
         )
         try:
-            payload, result = await self._complete_json(messages, max_tokens=4000)
+            payload, result = await self._complete_json(
+                messages,
+                max_tokens=4000,
+                request_type=AIRequestType.CHAT_COMPLEX,
+                context=usage_context,
+            )
             answer = str(payload.get("answer") or payload.get("response") or "").strip()
             citations = _coerce_citations(
                 payload.get("citations"), used_chunks, index, meta.duration
@@ -601,7 +651,12 @@ class AIReader:
                 raise AIOutputError()
         except (AIOutputError, ValueError):
             logger.warning("[chat] structured answer failed; using plain completion")
-            plain = await self.provider.complete(messages, max_tokens=4000)
+            plain = await self.provider.complete(
+                messages,
+                max_tokens=4000,
+                request_type=AIRequestType.CHAT_COMPLEX,
+                on_usage=self._usage_callback(usage_context),
+            )
             answer = plain.text.strip()
             citations = _fallback_citations(used_chunks)
             result = plain
@@ -619,6 +674,7 @@ class AIReader:
         history: list[dict[str, str]] | None = None,
         current_time: float | None = None,
         top_k: int | None = None,
+        usage_context: AIUsageContext | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
         messages, used_chunks = self._chat_messages(
             meta,
@@ -633,7 +689,12 @@ class AIReader:
         started = time.monotonic()
         input_chars = sum(len(m.get("content", "")) for m in messages)
         output_chars = 0
-        async for piece in self.provider.stream(messages, max_tokens=4000):
+        async for piece in self.provider.stream(
+            messages,
+            max_tokens=4000,
+            request_type=AIRequestType.CHAT_COMPLEX,
+            on_usage=self._usage_callback(usage_context),
+        ):
             output_chars += len(piece)
             yield {"type": "delta", "text": piece}
         yield {
@@ -651,6 +712,7 @@ class AIReader:
         self,
         meta: VideoMeta,
         index: ChunkIndex,
+        usage_context: AIUsageContext | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
         """Stream a grounded summary immediately, without waiting for the guide."""
         context, used_chunks = index.retrieve_context(
@@ -663,7 +725,10 @@ class AIReader:
         input_chars = sum(len(m.get("content", "")) for m in messages)
         output_chars = 0
         async for piece in self.provider.stream(
-            messages, max_tokens=2500, model=self.fast_model
+            messages,
+            max_tokens=2500,
+            request_type=AIRequestType.SUMMARY,
+            on_usage=self._usage_callback(usage_context),
         ):
             output_chars += len(piece)
             yield {"type": "delta", "text": piece}
@@ -671,7 +736,7 @@ class AIReader:
             "type": "done",
             "citations": [c.model_dump() for c in _fallback_citations(used_chunks)],
             "usage": Usage(
-                model=self.fast_model or self.provider.model,
+                model=self.settings.effective_fast_model,
                 input_chars=input_chars,
                 output_chars=output_chars,
                 latency_ms=int((time.monotonic() - started) * 1000),

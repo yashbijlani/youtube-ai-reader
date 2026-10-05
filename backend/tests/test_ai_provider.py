@@ -29,9 +29,9 @@ def test_classify_terminal_errors() -> None:
 
 async def test_stream_retries_then_succeeds() -> None:
     settings = Settings(_env_file=None)
-    settings.opencode_api_key = "test"
+    settings.gemini_api_key = "test"
     settings.ai_max_retries = 1
-    settings.opencode_max_concurrency = 2
+    settings.gemini_max_concurrency = 2
     calls = {"count": 0}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -54,7 +54,7 @@ async def test_stream_retries_then_succeeds() -> None:
 
 async def test_stream_does_not_retry_terminal_error() -> None:
     settings = Settings(_env_file=None)
-    settings.opencode_api_key = "test"
+    settings.gemini_api_key = "test"
     settings.ai_max_retries = 2
     calls = {"count": 0}
 

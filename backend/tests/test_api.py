@@ -434,15 +434,14 @@ def test_terminal_provider_error_returns_funding_error(client: TestClient) -> No
     assert response.json()["error"]["code"] == "ai_insufficient_funds"
 
 
-def test_fast_model_used_for_guide_but_not_reading(client: TestClient) -> None:
-    service = client.service  # type: ignore[attr-defined]
-    service.settings.opencode_fast_model = "fast-model"
-    service.reader.fast_model = "fast-model"
+def test_request_routing_uses_fast_tier_for_analysis_and_main_for_guide(
+    client: TestClient,
+) -> None:
     client.post("/api/videos/process", json={"youtube_url": VIDEO_URL})
     wait_for_guide(client, TEST_VIDEO_ID)
-    models = client.fake_ai.models  # type: ignore[attr-defined]
-    assert models.count("fast-model") >= 2  # overview + chapters
-    assert None in models  # the detailed reading uses the main model
+    request_types = client.fake_ai.request_types  # type: ignore[attr-defined]
+    assert request_types.count("analysis") >= 2  # overview + chapters
+    assert "guide" in request_types  # the detailed reading uses the main tier
 
 
 def test_reprocess_rebuilds_analysis(client: TestClient) -> None:

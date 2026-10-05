@@ -37,6 +37,7 @@ from app.models.schemas import (
     VideoState,
 )
 from app.services.ai_provider import AIProvider
+from app.services.ai.usage import AIUsageContext, AIUsageRecorder
 from app.services.cache import FileCache
 from app.services.chunking import chunk_segments
 from app.services.metrics import Metrics
@@ -67,6 +68,7 @@ ANALYSIS_PARTS = ("analysis_overview", "analysis_chapters", "analysis_reading")
 @dataclass
 class Job:
     video_id: str
+    user_id: str | None = None
     status: JobStatus = "idle"
     stage: str = "queued"
     stage_message: str = "Queued…"
@@ -92,12 +94,14 @@ class VideoService:
         transcript_provider: TranscriptProvider,
         ai_provider: AIProvider,
         metrics: Metrics | None = None,
+        usage_recorder: AIUsageRecorder | None = None,
     ) -> None:
         self.settings = settings
         self.cache = cache
         self.transcript_provider = transcript_provider
         self.ai_provider = ai_provider
-        self.reader = AIReader(ai_provider, settings)
+        self.usage_recorder = usage_recorder or AIUsageRecorder()
+        self.reader = AIReader(ai_provider, settings, usage_recorder=self.usage_recorder)
         self.metrics = metrics or global_metrics
         self.jobs: dict[str, Job] = {}
         self._indexes: dict[str, ChunkIndex] = {}
@@ -263,10 +267,14 @@ class VideoService:
 
     # ----------------------------------------------------------- process
 
-    async def process(self, youtube_url: str, *, force: bool = False) -> VideoState:
+    async def process(
+        self, youtube_url: str, *, force: bool = False, user_id: str | None = None
+    ) -> VideoState:
         video_id = extract_video_id(youtube_url)
         job = self.jobs.get(video_id)
         if job and job.status == "processing":
+            if user_id and not job.user_id:
+                job.user_id = user_id
             return self._state_from_job(job)
         if job and job.status == "ready" and job.analysis_status in ("pending", "partial"):
             # Analysis is still streaming in the background; keep the client attached.
@@ -279,6 +287,7 @@ class VideoService:
                 self.metrics.record_video(cached=True)
                 self.jobs[video_id] = Job(
                     video_id=video_id,
+                    user_id=user_id,
                     status="ready",
                     stage="ready",
                     stage_message=STAGE_MESSAGES["ready"],
@@ -296,6 +305,7 @@ class VideoService:
         initial_stage = "chat_ready" if resume else "queued"
         job = Job(
             video_id=video_id,
+            user_id=user_id,
             status="ready" if resume else "processing",
             stage=initial_stage,
             stage_message=STAGE_MESSAGES[initial_stage],
@@ -515,6 +525,7 @@ class VideoService:
                     meta,
                     chunks,
                     transcript.char_count,
+                    usage_context=AIUsageContext(user_id=job.user_id, video_id=video_id),
                     on_stage=stage,
                     on_overview=on_overview,
                     on_chapters=on_chapters,
@@ -602,7 +613,7 @@ class VideoService:
             time.monotonic() - started,
         )
 
-    async def reprocess(self, video_id: str) -> VideoState:
+    async def reprocess(self, video_id: str, user_id: str | None = None) -> VideoState:
         if not self.settings.ai_configured:
             raise AIProviderNotConfigured()
         job = self.jobs.get(video_id)
@@ -610,7 +621,7 @@ class VideoService:
             raise ProcessingInProgress()
         self.cache.delete(video_id, "analysis")
         self._indexes.pop(video_id, None)
-        return await self.process(canonical_watch_url(video_id), force=True)
+        return await self.process(canonical_watch_url(video_id), force=True, user_id=user_id)
 
     def cancel(self, video_id: str) -> bool:
         job = self.jobs.get(video_id)
@@ -621,7 +632,7 @@ class VideoService:
         logger.info("[video] cancelled id=%s", video_id)
         return True
 
-    async def repair(self, video_id: str) -> VideoState:
+    async def repair(self, video_id: str, user_id: str | None = None) -> VideoState:
         """Regenerate the guide for an existing transcript (keeps the captions)."""
         if not self.settings.ai_configured:
             raise AIProviderNotConfigured()
@@ -636,6 +647,7 @@ class VideoService:
         self._indexes.pop(video_id, None)
         job = Job(
             video_id=video_id,
+            user_id=user_id,
             status="ready",
             stage="chat_ready",
             stage_message=STAGE_MESSAGES["chat_ready"],
@@ -648,7 +660,9 @@ class VideoService:
 
     # -------------------------------------------------------------- ingest
 
-    async def ingest(self, video_id: str, request: IngestRequest) -> VideoState:
+    async def ingest(
+        self, video_id: str, request: IngestRequest, user_id: str | None = None
+    ) -> VideoState:
         """Accept a transcript captured by the client (the user's own session)."""
         if not self.settings.ai_configured:
             raise AIProviderNotConfigured()
@@ -706,6 +720,7 @@ class VideoService:
         await self.ai_provider.preflight()
         job = Job(
             video_id=video_id,
+            user_id=user_id,
             status="ready",
             stage="chat_ready",
             stage_message=STAGE_MESSAGES["chat_ready"],
@@ -737,7 +752,9 @@ class VideoService:
             raise VideoNotProcessed(video_id)
         return state.metadata, state.analysis
 
-    async def chat(self, video_id: str, request: ChatRequest) -> ChatResponse:
+    async def chat(
+        self, video_id: str, request: ChatRequest, user_id: str | None = None
+    ) -> ChatResponse:
         meta, analysis = self._require_ready(video_id)
         index = self.get_index(video_id)
         self._chats_inflight += 1
@@ -751,6 +768,7 @@ class VideoService:
                 request.message,
                 history=history,
                 current_time=request.current_time_seconds,
+                usage_context=AIUsageContext(user_id=user_id, video_id=video_id),
             )
             self.metrics.record_chat(
                 input_chars=result.input_chars, output_chars=len(answer)
@@ -775,7 +793,7 @@ class VideoService:
             self._chats_inflight -= 1
 
     async def stream_chat(
-        self, video_id: str, request: ChatRequest
+        self, video_id: str, request: ChatRequest, user_id: str | None = None
     ) -> AsyncIterator[dict[str, Any]]:
         meta, analysis = self._require_ready(video_id)
         index = self.get_index(video_id)
@@ -788,15 +806,20 @@ class VideoService:
             request.message,
             history=history,
             current_time=request.current_time_seconds,
+            usage_context=AIUsageContext(user_id=user_id, video_id=video_id),
         ):
             yield event
 
-    async def stream_summary(self, video_id: str) -> AsyncIterator[dict[str, Any]]:
+    async def stream_summary(
+        self, video_id: str, user_id: str | None = None
+    ) -> AsyncIterator[dict[str, Any]]:
         """Stream a grounded summary as soon as the transcript is ready."""
         meta, _analysis = self._require_ready(video_id)
         index = self.get_index(video_id)
         logger.info("[chat] streaming summary id=%s", video_id)
-        async for event in self.reader.stream_summary(meta, index):
+        async for event in self.reader.stream_summary(
+            meta, index, usage_context=AIUsageContext(user_id=user_id, video_id=video_id)
+        ):
             yield event
 
     async def stream_analysis(self, video_id: str) -> AsyncIterator[dict[str, Any]]:
@@ -872,6 +895,7 @@ class VideoService:
             task.cancel()
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
+        await self.usage_recorder.aclose()
         await self.ai_provider.aclose()
 
 
