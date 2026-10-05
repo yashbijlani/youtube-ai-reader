@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../lib/api";
+import { useAuth } from "../hooks/useAuth";
 import type { VideoInfo } from "../types";
 import { CloseIcon } from "./Icons";
 
@@ -38,6 +39,10 @@ export function SettingsSheet({
   const [health, setHealth] = useState<string>("");
   const [healthState, setHealthState] = useState<"idle" | "ok" | "bad" | "checking">("idle");
   const [cleared, setCleared] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [authNotice, setAuthNotice] = useState("");
+  const auth = useAuth();
 
   useEffect(() => {
     setDraftUrl(apiBaseUrl);
@@ -136,6 +141,78 @@ export function SettingsSheet({
 
         <div className="divider" />
 
+        <h3 style={{ fontSize: 13.5 }}>Account</h3>
+        {auth.loading ? (
+          <p className="muted">Checking account…</p>
+        ) : auth.session ? (
+          <>
+            <p className="muted">
+              Signed in as <strong>{auth.session.user.email ?? auth.session.user.id.slice(0, 8)}</strong>
+            </p>
+            <div className="settings-row" style={{ marginTop: 8 }}>
+              <button type="button" className="button secondary" onClick={() => void auth.signOut()}>
+                Sign out
+              </button>
+            </div>
+          </>
+        ) : !auth.configured ? (
+          <p className="muted">Sign-in is not configured in this build.</p>
+        ) : (
+          <>
+            <div className="field">
+              <label htmlFor="auth-email">Email</label>
+              <input
+                id="auth-email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="auth-password">Password</label>
+              <input
+                id="auth-password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </div>
+            {auth.error ? <div className="health-line bad">{auth.error}</div> : null}
+            {authNotice ? <div className="health-line ok">{authNotice}</div> : null}
+            <div className="settings-row">
+              <button
+                type="button"
+                className="button primary"
+                disabled={!email || !password}
+                onClick={async () => {
+                  setAuthNotice("");
+                  await auth.signIn(email, password);
+                }}
+              >
+                Sign in
+              </button>
+              <button
+                type="button"
+                className="button secondary"
+                disabled={!email || password.length < 6}
+                onClick={async () => {
+                  setAuthNotice("");
+                  const result = await auth.signUp(email, password);
+                  if (result?.needsConfirmation) {
+                    setAuthNotice("Check your email to confirm your account.");
+                  }
+                }}
+              >
+                Create account
+              </button>
+            </div>
+            <div className="hint">Signing in enables server-side quotas and Pro billing.</div>
+          </>
+        )}
+
+        <div className="divider" />
         <h3 style={{ fontSize: 13.5 }}>Conversations</h3>
         <p className="muted">Chat history is stored locally in your browser, per video.</p>
         <div className="settings-row" style={{ marginTop: 8 }}>

@@ -6,6 +6,7 @@ import json
 import logging
 import time
 from collections.abc import AsyncIterator
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Request
 from fastapi.responses import PlainTextResponse, StreamingResponse
@@ -16,6 +17,7 @@ from app.errors import (
     FreeLimitReached,
     InvalidYouTubeUrl,
     ProcessingInProgress,
+    Unauthorized,
     VideoNotProcessed,
 )
 from app.models.schemas import (
@@ -49,6 +51,18 @@ def get_settings(request: Request) -> Settings:
 
 def get_usage(request: Request) -> UsageStore:
     return request.app.state.usage_store
+
+
+def get_store(request: Request):
+    return request.app.state.store
+
+
+def current_period() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m")
+
+
+def verified_user_id(request: Request) -> str | None:
+    return getattr(request.state, "user_id", None)
 
 
 def install_id(request: Request) -> str | None:
@@ -112,6 +126,77 @@ async def health(request: Request) -> HealthResponse:
 @router.get("/stats", response_model=StatsResponse)
 async def stats() -> StatsResponse:
     return StatsResponse(**metrics.snapshot())
+
+
+# ------------------------------------------------------------------ account
+
+
+async def _account_payload(request: Request) -> dict:
+    store = get_store(request)
+    settings = get_settings(request)
+    user_id = verified_user_id(request)
+    period = current_period()
+    if not user_id:
+        return {
+            "authenticated": False,
+            "user": None,
+            "subscription": None,
+            "usage": {
+                "period": period,
+                "videos_used": 0,
+                "chat_messages": 0,
+                "ai_cost_usd": 0.0,
+                "lifetime_videos": 0,
+                "free_limit": settings.free_video_limit,
+                "free_monthly_limit": settings.free_monthly_video_limit,
+            },
+        }
+    user = await store.get_user(user_id) or await store.ensure_user(user_id)
+    subscription = await store.get_subscription(user_id)
+    used = await store.get_used_videos(user_id)
+    period_usage = await store.get_period_usage(user_id, period)
+    status = (subscription or {}).get("status", "FREE")
+    return {
+        "authenticated": True,
+        "user": {"id": user_id, "email": (user or {}).get("email"), "plan": (user or {}).get("plan", "free")},
+        "subscription": {
+            "status": status,
+            "plan": (subscription or {}).get("plan", "free"),
+            "current_period_end": (subscription or {}).get("current_period_end"),
+            "active": status == "ACTIVE",
+        },
+        "usage": {
+            "period": period,
+            "videos_used": int(period_usage.get("videos_used", 0)),
+            "chat_messages": int(period_usage.get("chat_messages", 0)),
+            "ai_cost_usd": float(period_usage.get("ai_cost_usd", 0.0)),
+            "lifetime_videos": len(used),
+            "free_limit": settings.free_video_limit,
+            "free_monthly_limit": settings.free_monthly_video_limit,
+        },
+    }
+
+
+@router.get("/me")
+async def me(request: Request) -> dict:
+    """Authoritative account/subscription/usage information."""
+    return await _account_payload(request)
+
+
+@router.get("/me/usage")
+async def my_usage(request: Request) -> dict:
+    return (await _account_payload(request))["usage"]
+
+
+@router.post("/me/device")
+async def link_my_device(request: Request) -> dict:
+    user_id = verified_user_id(request)
+    if not user_id:
+        raise Unauthorized()
+    install = install_id(request)
+    if install:
+        await get_store(request).link_device(install, user_id)
+    return {"ok": True}
 
 
 @router.post("/videos/process", response_model=VideoState)

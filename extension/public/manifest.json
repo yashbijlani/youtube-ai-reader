@@ -8,6 +8,7 @@
   "host_permissions": [
     "https://www.youtube.com/*",
     "https://m.youtube.com/*",
+    "https://*.supabase.co/*",
     "https://extensionpay.com/*",
     "http://localhost/*",
     "http://127.0.0.1/*"

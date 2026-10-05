@@ -8,6 +8,7 @@ import type {
   UsageInfo,
   VideoState,
 } from "../types";
+import { getAccessToken } from "./auth";
 import { getInstallId } from "./install";
 
 export class ApiError extends Error {
@@ -29,6 +30,12 @@ function baseUrlOf(baseUrl: string): string {
   return (baseUrl || "").replace(/\/+$/, "");
 }
 
+/** Centralized auth header: every authenticated request goes through here. */
+async function authHeader(): Promise<Record<string, string>> {
+  const token = await getAccessToken().catch(() => null);
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function request<T>(
   baseUrl: string,
   path: string,
@@ -42,6 +49,7 @@ async function request<T>(
       headers: {
         "Content-Type": "application/json",
         "X-Install-Id": installId,
+        ...(await authHeader()),
         ...(init?.headers ?? {}),
       },
     });
@@ -183,7 +191,11 @@ export async function askStream(
   try {
     response = await fetch(`${baseUrlOf(baseUrl)}/api/videos/${videoId}/chat`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Install-Id": await getInstallId() },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Install-Id": await getInstallId(),
+        ...(await authHeader()),
+      },
       body: JSON.stringify({ ...payload, stream: true }),
       signal,
     });
@@ -228,7 +240,11 @@ export async function summarizeStream(
   try {
     response = await fetch(`${baseUrlOf(baseUrl)}/api/videos/${videoId}/summarize`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Install-Id": await getInstallId() },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Install-Id": await getInstallId(),
+        ...(await authHeader()),
+      },
       body: "{}",
       signal,
     });
@@ -267,7 +283,11 @@ export async function analysisStream(
   try {
     response = await fetch(`${baseUrlOf(baseUrl)}/api/videos/${videoId}/analysis/stream`, {
       signal,
-      headers: { Accept: "text/event-stream", "X-Install-Id": await getInstallId() },
+      headers: {
+        Accept: "text/event-stream",
+        "X-Install-Id": await getInstallId(),
+        ...(await authHeader()),
+      },
     });
   } catch (error) {
     if ((error as Error)?.name === "AbortError") return;

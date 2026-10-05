@@ -160,3 +160,23 @@ class FreeLimitReached(AppError):
         )
         self.limit = limit
         self.remaining = remaining
+
+
+class Unauthorized(AppError):
+    def __init__(self, message: str = "Please sign in to continue.") -> None:
+        super().__init__("unauthorized", message, 401)
+
+
+class Forbidden(AppError):
+    def __init__(self, message: str = "You don't have access to this resource.") -> None:
+        super().__init__("forbidden", message, 403)
+
+
+class SubscriptionRequired(AppError):
+    def __init__(self, message: str = "An active subscription is required for this action.") -> None:
+        super().__init__("subscription_required", message, 402)
+
+
+class QuotaExceeded(AppError):
+    def __init__(self, message: str = "You've reached your usage limit. Upgrade for more.") -> None:
+        super().__init__("quota_exceeded", message, 402)

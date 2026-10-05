@@ -18,6 +18,7 @@ from app.errors import AppError
 from app.logging_conf import configure_logging
 from app.services.ai import create_provider
 from app.services.ai.usage import AIUsageRecorder
+from app.services.auth import SupabaseAuth
 from app.services.cache import FileCache
 from app.services.rate_limit import limiter
 from app.services.store import create_store
@@ -26,6 +27,29 @@ from app.services.usage import UsageStore
 from app.services.video_service import VideoService
 
 logger = logging.getLogger("youtube_ai_reader")
+
+_ensured_users: set[str] = set()
+_linked_devices: set[str] = set()
+
+
+async def _ensure_user_best_effort(
+    app: FastAPI, user_id: str, email: str | None, install_id: str | None
+) -> None:
+    """Create the profile / link the device once per process (best effort)."""
+    store = getattr(app.state, "store", None)
+    if store is None:
+        return
+    try:
+        if user_id not in _ensured_users:
+            await store.ensure_user(user_id, email)
+            _ensured_users.add(user_id)
+        if install_id:
+            key = f"{user_id}:{install_id}"
+            if key not in _linked_devices:
+                await store.link_device(install_id, user_id)
+                _linked_devices.add(key)
+    except Exception:  # noqa: BLE001 - never block a request on profile bookkeeping
+        logger.debug("[auth] profile/device upsert failed", exc_info=True)
 
 
 @asynccontextmanager
@@ -38,6 +62,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     ai_provider = create_provider(settings)
     transcript_provider = YtDlpTranscriptProvider(settings)
     store = create_store(settings)
+    auth = SupabaseAuth(settings)
+    app.state.auth = auth
 
     async def _usage_sink(record) -> None:  # noqa: ANN001
         await store.save_ai_usage(record.to_row())
@@ -83,6 +109,47 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_headers=["Content-Type", "Authorization", "X-Install-Id"],
         max_age=3600,
     )
+
+    @app.middleware("http")
+    async def authenticate_request(request: Request, call_next):
+        """Verify the Supabase JWT and attach the verified user id.
+
+        Public endpoints are skipped. In development (``AUTH_REQUIRED=false``)
+        requests without a token are allowed and fall back to the install id
+        for local usage tracking only.
+        """
+        settings: Settings = app.state.settings
+        path = request.url.path
+        public = (
+            path in ("/api/health",)
+            or path.startswith("/api/billing/webhook")
+            or not path.startswith("/api")
+        )
+        if public:
+            return await call_next(request)
+
+        auth: SupabaseAuth = app.state.auth
+        header = request.headers.get("authorization", "")
+        user = None
+        if header.lower().startswith("bearer "):
+            token = header.split(" ", 1)[1].strip()
+            try:
+                user = await auth.verify(token)
+            except AppError as exc:
+                return JSONResponse(
+                    status_code=exc.status_code,
+                    content={"error": {"code": exc.code, "message": exc.message}},
+                )
+        if user is None and settings.auth_required:
+            return JSONResponse(
+                status_code=401,
+                content={"error": {"code": "unauthorized", "message": "Please sign in to continue."}},
+            )
+        if user is not None:
+            request.state.user_id = user.id
+            request.state.user_email = user.email
+            await _ensure_user_best_effort(app, user.id, user.email, request.headers.get("x-install-id"))
+        return await call_next(request)
 
     @app.middleware("http")
     async def access_log_and_general_limit(request: Request, call_next):
