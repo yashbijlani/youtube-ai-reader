@@ -1,4 +1,3 @@
-import { extpay } from "./lib/entitlement";
 import { BrowserTranscriptProvider, toClientPayload } from "./transcript-rnd/browser-provider";
 import type {
   BackgroundBroadcast,
@@ -11,9 +10,6 @@ import type {
 
 const STORAGE_KEY = "yair.context";
 const TRANSCRIPTS_KEY = "yair.clientTranscripts";
-
-// ExtensionPay requires its background listener to be registered once.
-extpay.startBackground();
 
 interface RuntimeState {
   video: VideoInfo | null;

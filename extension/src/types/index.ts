@@ -116,6 +116,34 @@ export interface UsageInfo {
   remaining: number;
 }
 
+export interface AccountInfo {
+  authenticated: boolean;
+  user: { id: string; email?: string | null; plan?: string } | null;
+  subscription: {
+    status: string;
+    plan: string;
+    current_period_end?: string | null;
+    active: boolean;
+  } | null;
+  usage: {
+    period: string;
+    videos_used: number;
+    chat_messages: number;
+    ai_cost_usd: number;
+    lifetime_videos: number;
+    free_limit: number;
+    free_monthly_limit: number;
+  };
+}
+
+export interface BillingOrder {
+  order_id: string;
+  amount: number;
+  currency: string;
+  key_id: string;
+  plan_name: string;
+}
+
 export interface StoredMessage {
   id: string;
   role: "user" | "assistant";

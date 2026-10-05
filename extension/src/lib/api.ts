@@ -1,4 +1,6 @@
 import type {
+  AccountInfo,
+  BillingOrder,
   Chapter,
   ChatResponse,
   Citation,
@@ -141,6 +143,27 @@ export const api = {
 
   usage(baseUrl: string): Promise<UsageInfo> {
     return request<UsageInfo>(baseUrl, "/api/usage");
+  },
+
+  me(baseUrl: string): Promise<AccountInfo> {
+    return request<AccountInfo>(baseUrl, "/api/me");
+  },
+
+  createOrder(baseUrl: string): Promise<BillingOrder> {
+    return request<BillingOrder>(baseUrl, "/api/billing/create-order", {
+      method: "POST",
+      body: "{}",
+    });
+  },
+
+  verifyPayment(
+    baseUrl: string,
+    payload: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string },
+  ): Promise<{ ok: boolean }> {
+    return request<{ ok: boolean }>(baseUrl, "/api/billing/verify", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   },
 
   setEntitlement(baseUrl: string, paid: boolean, email?: string | null): Promise<UsageInfo> {

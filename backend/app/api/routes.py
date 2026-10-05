@@ -27,8 +27,10 @@ from app.models.schemas import (
     IngestRequest,
     ProcessRequest,
     StatsResponse,
+    VerifyPaymentRequest,
     VideoState,
 )
+from app.services.billing import BillingService
 from app.services.metrics import metrics
 from app.services.quota import QuotaService
 from app.services.rate_limit import limiter
@@ -221,6 +223,51 @@ async def link_my_device(request: Request) -> dict:
     if install:
         await get_store(request).link_device(install, user_id)
     return {"ok": True}
+
+
+# ------------------------------------------------------------------ billing
+
+
+def get_billing(request: Request) -> BillingService:
+    return BillingService(get_settings(request), get_store(request))
+
+
+@router.post("/billing/create-order")
+async def billing_create_order(request: Request) -> dict:
+    user_id = verified_user_id(request)
+    if not user_id:
+        raise Unauthorized("Please sign in to upgrade.")
+    return await get_billing(request).create_order(user_id)
+
+
+@router.post("/billing/verify")
+async def billing_verify(request: Request, payload: VerifyPaymentRequest) -> dict:
+    user_id = verified_user_id(request)
+    if not user_id:
+        raise Unauthorized("Please sign in to complete your purchase.")
+    subscription = await get_billing(request).verify_payment(
+        user_id,
+        payload.razorpay_order_id,
+        payload.razorpay_payment_id,
+        payload.razorpay_signature,
+    )
+    return {"ok": True, "subscription": subscription}
+
+
+@router.get("/billing/subscription")
+async def billing_subscription(request: Request) -> dict:
+    user_id = verified_user_id(request)
+    if not user_id:
+        return {"status": "FREE", "plan": "free", "active": False}
+    return await get_billing(request).decorate_status(user_id)
+
+
+@router.post("/billing/webhook")
+async def billing_webhook(request: Request) -> dict:
+    """Razorpay webhook. Signature is verified against the raw request body."""
+    body = await request.body()
+    signature = request.headers.get("x-razorpay-signature", "")
+    return await get_billing(request).handle_webhook(body, signature)
 
 
 @router.post("/videos/process", response_model=VideoState)

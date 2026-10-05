@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
-import { extpay, getExtPayEntitlement } from "../lib/entitlement";
-import type { UsageInfo } from "../types";
+import { openRazorpayCheckout } from "../lib/billing";
+import type { AccountInfo, UsageInfo } from "../types";
 
 export interface EntitlementController {
   paid: boolean;
@@ -9,28 +9,31 @@ export interface EntitlementController {
   limit: number;
   remaining: number;
   loading: boolean;
+  error: string | null;
   refresh: () => Promise<void>;
   openPayment: () => void;
   openTrial: () => void;
   manage: () => void;
 }
 
+const FREE_DEFAULT: UsageInfo = { used: 0, limit: 3, paid: false, remaining: 3 };
+
+/**
+ * Entitlement is authoritative on the backend (`GET /me`). Upgrades go through
+ * a server-created Razorpay order and server-side signature verification.
+ */
 export function useEntitlement(apiBaseUrl: string): EntitlementController {
-  const [usage, setUsage] = useState<UsageInfo | null>(null);
+  const [account, setAccount] = useState<AccountInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const entitlement = await getExtPayEntitlement();
-      if (entitlement.paid) {
-        await api
-          .setEntitlement(apiBaseUrl, true, entitlement.email)
-          .catch(() => undefined);
-      }
-      const info = await api.usage(apiBaseUrl);
-      setUsage(info);
+      const info = await api.me(apiBaseUrl);
+      setAccount(info);
+      setError(null);
     } catch {
-      // Usage endpoint may be unreachable; keep defaults.
+      // Account info is unavailable (offline); keep last known state.
     } finally {
       setLoading(false);
     }
@@ -40,23 +43,50 @@ export function useEntitlement(apiBaseUrl: string): EntitlementController {
     void refresh();
   }, [refresh]);
 
-  useEffect(() => {
+  const startCheckout = useCallback(async () => {
+    setError(null);
     try {
-      extpay.onPaid.addListener(() => void refresh());
-    } catch {
-      // ExtPay not configured yet.
+      const order = await api.createOrder(apiBaseUrl);
+      await openRazorpayCheckout(
+        order,
+        { email: account?.user?.email ?? null },
+        {
+          onSuccess: async (response) => {
+            try {
+              await api.verifyPayment(apiBaseUrl, response);
+              await refresh();
+            } catch {
+              setError("Payment received, but activation failed. Please contact support.");
+            }
+          },
+          onDismiss: () => undefined,
+        },
+      );
+    } catch (err) {
+      setError((err as Error).message || "Could not start checkout.");
     }
-  }, [refresh]);
+  }, [account?.user?.email, apiBaseUrl, refresh]);
+
+  const usage: UsageInfo = account
+    ? {
+        used: account.usage.lifetime_videos,
+        limit: account.usage.free_limit,
+        paid: account.subscription?.active ?? false,
+        remaining: Math.max(account.usage.free_limit - account.usage.lifetime_videos, 0),
+      }
+    : FREE_DEFAULT;
 
   return {
-    paid: usage?.paid ?? false,
-    used: usage?.used ?? 0,
-    limit: usage?.limit ?? 3,
-    remaining: usage?.remaining ?? 3,
+    paid: usage.paid,
+    used: usage.used,
+    limit: usage.limit,
+    remaining: usage.remaining,
     loading,
+    error,
     refresh,
-    openPayment: () => void extpay.openPaymentPage().catch(() => undefined),
-    openTrial: () => void extpay.openTrialPage().catch(() => undefined),
-    manage: () => void extpay.openPaymentPage().catch(() => undefined),
+    openPayment: () => void startCheckout(),
+    // No separate trial anymore; the button opens the same checkout.
+    openTrial: () => void startCheckout(),
+    manage: () => void startCheckout(),
   };
 }

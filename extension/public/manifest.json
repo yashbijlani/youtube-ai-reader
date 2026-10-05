@@ -9,7 +9,8 @@
     "https://www.youtube.com/*",
     "https://m.youtube.com/*",
     "https://*.supabase.co/*",
-    "https://extensionpay.com/*",
+    "https://api.razorpay.com/*",
+    "https://checkout.razorpay.com/*",
     "http://localhost/*",
     "http://127.0.0.1/*"
   ],
@@ -24,6 +25,9 @@
       "run_at": "document_idle"
     }
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' https://checkout.razorpay.com; object-src 'self'; frame-src https://api.razorpay.com https://checkout.razorpay.com"
+  },
   "side_panel": {
     "default_path": "sidepanel.html"
   },

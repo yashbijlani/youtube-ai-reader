@@ -128,10 +128,16 @@ class ProcessRequest(BaseModel):
 
 
 class EntitlementRequest(BaseModel):
-    """Best-effort paid status reported by the extension (ExtensionPay)."""
+    """Deprecated: legacy client-reported paid status (no longer trusted)."""
 
     paid: bool
     email: str | None = Field(default=None, max_length=200)
+
+
+class VerifyPaymentRequest(BaseModel):
+    razorpay_order_id: str = Field(min_length=4, max_length=200)
+    razorpay_payment_id: str = Field(min_length=4, max_length=200)
+    razorpay_signature: str = Field(min_length=8, max_length=512)
 
 
 class IngestRequest(BaseModel):
