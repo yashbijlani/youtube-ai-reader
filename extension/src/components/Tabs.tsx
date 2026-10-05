@@ -1,32 +1,23 @@
 import type { ReactElement } from "react";
 import type { TabId } from "../types";
-import { BookIcon, ChatIcon, ListIcon, TextIcon } from "./Icons";
+import { BookIcon, ChatIcon } from "./Icons";
 
 interface TabsProps {
   active: TabId;
   onChange: (tab: TabId) => void;
-  counts: { chapters: number; transcript: number; chat: number };
+  counts: { chat: number };
 }
 
 const TABS: Array<{ id: TabId; label: string; icon: (props: { size?: number }) => ReactElement }> = [
   { id: "overview", label: "Overview", icon: BookIcon },
-  { id: "chapters", label: "Chapters", icon: ListIcon },
-  { id: "transcript", label: "Transcript", icon: TextIcon },
-  { id: "chat", label: "Chat", icon: ChatIcon },
+  { id: "chat", label: "Ask", icon: ChatIcon },
 ];
 
 export function Tabs({ active, onChange, counts }: TabsProps) {
   return (
     <nav className="tabs" role="tablist" aria-label="Reader sections">
       {TABS.map((tab) => {
-        const count =
-          tab.id === "chapters"
-            ? counts.chapters
-            : tab.id === "transcript"
-              ? counts.transcript
-              : tab.id === "chat"
-                ? counts.chat
-                : 0;
+        const count = tab.id === "chat" ? counts.chat : 0;
         const Icon = tab.icon;
         return (
           <button

@@ -35,13 +35,9 @@ describe("BrowserTranscriptProvider", () => {
     const provider = new BrowserTranscriptProvider({
       scripting: makeScripting((name) => {
         if (name === "inspectCaptionTracks" || name === "triggerCaptionRequest") return TRACKS;
-        if (name === "READ_CAPTURES") return { via: "xhr", hasPot: true, bytes: JSON3.length, paramKeys: ["v", "pot"], text: JSON3 };
+        if (name === "readPageCaptures") return { via: "xhr", hasPot: true, bytes: JSON3.length, paramKeys: ["v", "pot"], text: JSON3 };
         return null;
       }),
-      now: (() => {
-        let t = 0;
-        return () => (t += 10);
-      })(),
     });
     const result = await provider.extract(1, { prefLang: "en", interceptTimeoutMs: 5000 });
     expect(result).not.toBeNull();
@@ -60,14 +56,10 @@ describe("BrowserTranscriptProvider", () => {
     const provider = new BrowserTranscriptProvider({
       scripting: makeScripting((name) => {
         if (name === "inspectCaptionTracks" || name === "triggerCaptionRequest") return TRACKS;
-        if (name === "READ_CAPTURES") return null;
+        if (name === "readPageCaptures") return null;
         if (name === "captureDomCaptions") return [{ start: 1.5, text: "dom line" }];
         return null;
       }),
-      now: (() => {
-        let t = 0;
-        return () => (t += 10);
-      })(),
     });
     const result = await provider.extract(1, { interceptTimeoutMs: 60, domFallbackMs: 100 });
     expect(result?.method).toBe("caption_dom");
@@ -79,10 +71,6 @@ describe("BrowserTranscriptProvider", () => {
   it("returns null when neither interception nor DOM yields a transcript", async () => {
     const provider = new BrowserTranscriptProvider({
       scripting: makeScripting(() => null),
-      now: (() => {
-        let t = 0;
-        return () => (t += 10);
-      })(),
     });
     const result = await provider.extract(1, { interceptTimeoutMs: 60, domFallbackMs: 10 });
     expect(result).toBeNull();
@@ -92,14 +80,10 @@ describe("BrowserTranscriptProvider", () => {
     const provider = new BrowserTranscriptProvider({
       scripting: makeScripting((name) => {
         if (name === "inspectCaptionTracks" || name === "triggerCaptionRequest") return TRACKS;
-        if (name === "READ_CAPTURES") return { via: "xhr", hasPot: true, bytes: 16, paramKeys: [], text: "{not json" };
+        if (name === "readPageCaptures") return { via: "xhr", hasPot: true, bytes: 16, paramKeys: [], text: "{not json" };
         if (name === "captureDomCaptions") return [{ start: 2, text: "dom fallback" }];
         return null;
       }),
-      now: (() => {
-        let t = 0;
-        return () => (t += 10);
-      })(),
     });
     const result = await provider.extract(1, { interceptTimeoutMs: 200, domFallbackMs: 100 });
     expect(result?.method).toBe("caption_dom");

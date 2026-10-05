@@ -12,7 +12,7 @@
 
 import { pageInterceptor, type PageInterceptorConfig } from "./page-interceptor";
 import { parseJson3, normalizeSegments, type RawSegment } from "./parseJson3";
-import { captureDomCaptions, inspectCaptionTracks, triggerCaptionRequest, type CaptionTrackInfo } from "./methods";
+import { captureDomCaptions, getMediaDuration, inspectCaptionTracks, triggerCaptionRequest, type CaptionTrackInfo } from "./methods";
 import type { ExtractionMethod } from "./types";
 
 interface RawCapture {
@@ -61,22 +61,21 @@ export class ChromePageScripting implements PageScripting {
   }
 }
 
-const COLLECTOR = () => {
-  const w = window as unknown as { __yairRnd?: RawCapture[] };
-  if (!Array.isArray(w.__yairRnd)) w.__yairRnd = [];
-  return null;
-};
-
 /** Ignore absurd/abusive caption payloads (a transcript is never this large). */
 export const MAX_CAPTURE_BYTES = 8_000_000;
 
-const READ_CAPTURES = () => {
-  const w = window as unknown as { __yairRnd?: RawCapture[] };
+/**
+ * Read the largest caption body the MAIN-world interceptor stashed on
+ * `window.__yairCaptured`. Must match the global written by `page-interceptor.ts`.
+ * Self-contained: Chrome serializes this function body into the page.
+ */
+export function readPageCaptures(): RawCapture | null {
+  const w = window as unknown as { __yairCaptured?: RawCapture[] };
   // 8_000_000 must match MAX_CAPTURE_BYTES (function body is serialized alone).
-  const caps = (w.__yairRnd || []).filter((c) => c && c.bytes > 0 && c.bytes <= 8_000_000);
+  const caps = (w.__yairCaptured || []).filter((c) => c && c.bytes > 0 && c.bytes <= 8_000_000);
   caps.sort((a, b) => b.bytes - a.bytes);
   return caps[0] || null;
-};
+}
 
 export interface BrowserProviderOptions {
   prefLang?: string;
@@ -111,16 +110,56 @@ export class BrowserTranscriptProvider {
     const token = `yair-${Math.random().toString(36).slice(2)}`;
     const config: PageInterceptorConfig = { token, source: "yair-rnd", patchFetch: true };
     await this.scripting.injectMainWorld(tabId, pageInterceptor as unknown as (...a: never[]) => void, [config]);
-    await this.scripting.injectMainWorld(tabId, COLLECTOR as (...a: never[]) => null, []);
+    const duration = await this.scripting
+      .evaluateMainWorld<number>(tabId, getMediaDuration as (...a: never[]) => number, [])
+      .catch(() => 0);
     await this.scripting.evaluateMainWorld(tabId, triggerCaptionRequest as (...a: never[]) => CaptionTrackInfo, [prefLang]);
 
+    // Poll for the caption response, retriggering the player a couple of times
+    // for slow/ASR-only tracks. Retriggers only toggle YouTube's own captions in
+    // the page; they never touch our server or yt-dlp.
+    //
+    // We keep the largest capture and stop as soon as it is *complete* (covers
+    // most of the video). If it looks partial we keep waiting for a later, full
+    // response (the player can deliver it several seconds in) with retriggers.
     const deadline = started + timeoutMs;
     let capture: RawCapture | null = null;
+    let best: RawCapture | null = null;
+    let bestBytes = 0;
+    let lastTimestamp = 0;
+    let nextRetrigger = started + 6_000;
+    let retriggers = 0;
+    let graceUntil = 0;
+    const maxRetriggers = 3;
+    // With a known duration we allow longer for the full track to arrive; if the
+    // duration is unknown (tests/edge cases) keep the wait short.
+    const stableMs = duration > 0 ? 8_000 : 800;
     while (this.now() < deadline) {
-      capture = await this.scripting.evaluateMainWorld<RawCapture | null>(tabId, READ_CAPTURES as (...a: never[]) => RawCapture | null, []);
-      if (capture?.bytes) break;
+      capture = await this.scripting.evaluateMainWorld<RawCapture | null>(
+        tabId,
+        readPageCaptures as (...a: never[]) => RawCapture | null,
+        [],
+      );
+      if (capture?.bytes) {
+        if (capture.bytes > bestBytes) {
+          bestBytes = capture.bytes;
+          best = capture;
+          const segments = normalizeSegments(parseJson3(capture.text));
+          lastTimestamp = segments.length ? (segments[segments.length - 1].start ?? 0) : 0;
+          graceUntil = this.now() + stableMs;
+        }
+        const complete = duration > 0 && lastTimestamp >= duration * 0.9;
+        if (complete || this.now() >= graceUntil) break;
+      } else if (this.now() >= nextRetrigger && retriggers < maxRetriggers) {
+        retriggers += 1;
+        nextRetrigger = this.now() + 6_000;
+        await this.scripting
+          .evaluateMainWorld(tabId, triggerCaptionRequest as (...a: never[]) => CaptionTrackInfo, [prefLang])
+          .catch(() => null);
+      }
       await new Promise((r) => setTimeout(r, 400));
     }
+    capture = best;
 
     if (capture?.text) {
       const segments = normalizeSegments(parseJson3(capture.text));

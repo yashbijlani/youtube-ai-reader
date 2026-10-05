@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
+import { onAuthChange } from "../lib/auth";
 import { openRazorpayCheckout } from "../lib/billing";
 import type { AccountInfo, UsageInfo } from "../types";
 
@@ -42,6 +43,9 @@ export function useEntitlement(apiBaseUrl: string): EntitlementController {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Re-fetch authoritative account state whenever the auth session changes.
+  useEffect(() => onAuthChange(() => void refresh()), [refresh]);
 
   const startCheckout = useCallback(async () => {
     setError(null);

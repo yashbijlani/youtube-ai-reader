@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { pageInterceptor } from "../../src/transcript-rnd/page-interceptor";
+import { readPageCaptures } from "../../src/transcript-rnd/browser-provider";
 
 class FakeXHR extends EventTarget {
   responseText = "";
@@ -19,6 +20,7 @@ describe("pageInterceptor (MAIN world)", () => {
   beforeEach(() => {
     messages = [];
     (window as unknown as { __yairInterceptorInstalled?: boolean }).__yairInterceptorInstalled = undefined;
+    (window as unknown as { __yairCaptured?: unknown }).__yairCaptured = undefined;
     window.XMLHttpRequest = FakeXHR as unknown as typeof XMLHttpRequest;
     window.addEventListener("message", (event) => {
       if (event.data && typeof event.data === "object") messages.push(event.data as Record<string, unknown>);
@@ -43,6 +45,22 @@ describe("pageInterceptor (MAIN world)", () => {
     expect(caption?.hasPot).toBe(true);
     expect(caption?.bytes).toBeGreaterThan(0);
     expect(String(caption?.text)).toContain("\"events\"");
+  });
+
+  it("exposes the capture via readPageCaptures (regression: wrong global name)", async () => {
+    // The production provider reads window.__yairCaptured; if the interceptor
+    // ever writes somewhere else, browser capture silently falls back to yt-dlp.
+    pageInterceptor({ token: "tok-9", source: "yair-rnd" });
+    const xhr = new window.XMLHttpRequest() as unknown as FakeXHR;
+    const body = "{\"events\":[{\"segs\":[{\"utf8\":\"captured\"}]}]}";
+    xhr.open("GET", "https://www.youtube.com/api/timedtext?v=abc&pot=xyz&fmt=json3");
+    xhr.responseText = body;
+    xhr.dispatchEvent(new Event("load"));
+    await tick();
+    const capture = readPageCaptures();
+    expect(capture).not.toBeNull();
+    expect(capture?.text).toBe(body);
+    expect(capture?.hasPot).toBe(true);
   });
 
   it("ignores non-caption thumbnails/requests and empty bodies", async () => {

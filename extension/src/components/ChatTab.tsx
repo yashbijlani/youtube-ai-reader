@@ -1,16 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import type { ChatController } from "../hooks/useChat";
 import { timeAgo } from "../lib/format";
-import type { VideoInfo } from "../types";
 import { BrandMark, RefreshIcon, SendIcon, SparkleIcon, StopIcon } from "./Icons";
 import { MarkdownView } from "./MarkdownView";
 
 interface ChatTabProps {
-  video: VideoInfo;
   controller: ChatController;
   onSeek: (seconds: number) => void;
   playbackSeconds: number | null;
-  onOpenSettings: () => void;
   ready: boolean;
   guideReady: boolean;
 }

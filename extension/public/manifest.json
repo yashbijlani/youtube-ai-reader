@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Turn any YouTube video into a readable, searchable, askable AI companion.",
   "minimum_chrome_version": "116",
-  "permissions": ["storage", "sidePanel", "scripting"],
+  "permissions": ["storage", "sidePanel", "scripting", "identity"],
   "host_permissions": [
     "https://www.youtube.com/*",
     "https://m.youtube.com/*",
@@ -23,11 +23,14 @@
       "matches": ["https://www.youtube.com/*", "https://m.youtube.com/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.youtube.com/*", "https://m.youtube.com/*"],
+      "js": ["interceptor.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
     }
   ],
-  "content_security_policy": {
-    "extension_pages": "script-src 'self' https://checkout.razorpay.com; object-src 'self'; frame-src https://api.razorpay.com https://checkout.razorpay.com"
-  },
   "side_panel": {
     "default_path": "sidepanel.html"
   },

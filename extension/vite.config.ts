@@ -6,6 +6,9 @@ const root = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
   root: fileURLToPath(new URL("src", import.meta.url)),
+  // Load extension/.env (not src/.env) so VITE_* values are inlined into the
+  // side panel bundle. Without this, root=src makes Vite read src/.env.
+  envDir: root,
   base: "./",
   publicDir: false,
   plugins: [react()],

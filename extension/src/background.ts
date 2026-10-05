@@ -4,6 +4,7 @@ import type {
   ClientTranscriptPayload,
   ContentToBackground,
   PanelToBackground,
+  TranscriptExtractionResult,
   VideoContextSnapshot,
   VideoInfo,
 } from "./types";
@@ -89,29 +90,10 @@ function broadcastPlaybackThrottled(): void {
  */
 const browserProvider = new BrowserTranscriptProvider();
 
-async function extractClientTranscript(
-  tabId: number,
-): Promise<ClientTranscriptPayload | null> {
-  try {
-    const result = await browserProvider.extract(tabId, {
-      prefLang: "en",
-      interceptTimeoutMs: 20000,
-      domFallbackMs: 8000,
-    });
-    if (!result) {
-      console.log("[yair] no browser caption response captured; server fallback will handle it");
-      return null;
-    }
-    return toClientPayload(result);
-  } catch (error) {
-    console.warn("[yair] client transcript extraction failed", error);
-    return null;
-  }
-}
-
-async function storeClientTranscript(tabId: number, videoId: string): Promise<void> {
-  const payload = await extractClientTranscript(tabId);
-  if (!payload) return;
+async function storeClientTranscript(
+  videoId: string,
+  payload: ClientTranscriptPayload,
+): Promise<void> {
   payload.videoId = videoId;
   try {
     const stored = await chrome.storage.session.get(TRANSCRIPTS_KEY);
@@ -136,6 +118,38 @@ async function getClientTranscript(videoId: string): Promise<ClientTranscriptPay
   }
 }
 
+// In-flight extractions per tab, so a pre-extraction on navigation and an
+// awaited request from the panel share one capture instead of racing.
+const extractionInflight: Record<number, Promise<TranscriptExtractionResult>> = {};
+
+function extractAndStore(tabId: number, videoId: string): Promise<TranscriptExtractionResult> {
+  const existing = extractionInflight[tabId];
+  if (existing) return existing;
+  const task = (async (): Promise<TranscriptExtractionResult> => {
+    try {
+      const result = await browserProvider.extract(tabId, {
+        prefLang: "en",
+        interceptTimeoutMs: 20000,
+        domFallbackMs: 8000,
+      });
+      if (!result) {
+        console.log("[yair] no browser captions found; server fallback will handle it");
+        return { status: "no_captions" };
+      }
+      const payload = toClientPayload(result);
+      await storeClientTranscript(videoId, payload);
+      return { status: "ok", payload };
+    } catch (error) {
+      console.warn("[yair] browser transcript extraction failed", error);
+      return { status: "error", message: (error as Error).message };
+    }
+  })().finally(() => {
+    delete extractionInflight[tabId];
+  });
+  extractionInflight[tabId] = task;
+  return task;
+}
+
 const extractionTimers: Record<number, number> = {};
 
 function scheduleExtraction(tabId: number | undefined, videoId: string, delay = 1500): void {
@@ -144,7 +158,7 @@ function scheduleExtraction(tabId: number | undefined, videoId: string, delay = 
   if (existing) clearTimeout(existing);
   extractionTimers[tabId] = setTimeout(() => {
     delete extractionTimers[tabId];
-    void storeClientTranscript(tabId, videoId);
+    void extractAndStore(tabId, videoId);
   }, delay) as unknown as number;
 }
 
@@ -233,6 +247,13 @@ async function handle(
       return { ...snapshot(), requestedVideoId: state.requestedVideoId };
     case "GET_CLIENT_TRANSCRIPT":
       return getClientTranscript(message.videoId);
+    case "EXTRACT_CLIENT_TRANSCRIPT": {
+      const tabId = sender.tab?.id ?? state.tabId ?? undefined;
+      const cached = await getClientTranscript(message.videoId);
+      if (cached) return { status: "ok", payload: cached } satisfies TranscriptExtractionResult;
+      if (tabId == null) return { status: "error", message: "No active YouTube tab." } satisfies TranscriptExtractionResult;
+      return extractAndStore(tabId, message.videoId);
+    }
     case "CONSUME_REQUEST":
       state.requestedVideoId = null;
       return { ok: true };

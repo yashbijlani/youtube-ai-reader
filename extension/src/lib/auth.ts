@@ -19,6 +19,8 @@ export const authConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 export interface AuthUser {
   id: string;
   email: string | null;
+  name?: string | null;
+  avatarUrl?: string | null;
 }
 
 export interface AuthSession {
@@ -29,11 +31,22 @@ export interface AuthSession {
   user: AuthUser;
 }
 
+interface SupabaseUser {
+  id: string;
+  email?: string | null;
+  user_metadata?: {
+    full_name?: string;
+    name?: string;
+    avatar_url?: string;
+    picture?: string;
+  };
+}
+
 interface SupabaseTokenResponse {
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
-  user?: { id: string; email?: string | null };
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+  user?: SupabaseUser;
 }
 
 const listeners = new Set<(session: AuthSession | null) => void>();
@@ -65,15 +78,22 @@ async function persist(session: AuthSession | null): Promise<void> {
   }
 }
 
+function toAuthUser(user: SupabaseUser | undefined, fallback?: AuthUser): AuthUser {
+  const meta = user?.user_metadata ?? {};
+  return {
+    id: user?.id ?? fallback?.id ?? "",
+    email: user?.email ?? fallback?.email ?? null,
+    name: meta.full_name || meta.name || fallback?.name || null,
+    avatarUrl: meta.avatar_url || meta.picture || fallback?.avatarUrl || null,
+  };
+}
+
 function toSession(data: SupabaseTokenResponse, fallbackUser?: AuthUser): AuthSession {
   return {
-    accessToken: data.access_token,
-    refreshToken: data.refresh_token,
+    accessToken: data.access_token ?? "",
+    refreshToken: data.refresh_token ?? "",
     expiresAt: Date.now() + (data.expires_in ?? 3600) * 1000,
-    user: {
-      id: data.user?.id ?? fallbackUser?.id ?? "",
-      email: data.user?.email ?? fallbackUser?.email ?? null,
-    },
+    user: toAuthUser(data.user, fallbackUser),
   };
 }
 
@@ -161,7 +181,117 @@ async function refresh(session: AuthSession): Promise<AuthSession | null> {
   return next;
 }
 
-/** Return a valid access token, refreshing it if it expires within 60s. */
+// --------------------------------------------------------------- Google OAuth
+
+function base64Url(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function randomVerifier(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return base64Url(bytes);
+}
+
+async function pkceChallenge(verifier: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+  return base64Url(new Uint8Array(digest));
+}
+
+/** The OAuth redirect URL that must be allow-listed in Supabase. */
+export function getOAuthRedirectUrl(): string {
+  return chrome.identity.getRedirectURL("supabase");
+}
+
+function parseOAuthRedirect(redirectUrl: string): URLSearchParams {
+  const url = new URL(redirectUrl);
+  // Supabase returns tokens in the fragment (implicit) or a code in the query (PKCE).
+  const params = new URLSearchParams(url.search);
+  if (url.hash.length > 1) {
+    for (const [key, value] of new URLSearchParams(url.hash.slice(1))) {
+      params.set(key, value);
+    }
+  }
+  return params;
+}
+
+async function exchangePkceCode(code: string, verifier: string): Promise<AuthSession> {
+  const response = await authEndpoint("/auth/v1/token?grant_type=pkce", {
+    method: "POST",
+    body: JSON.stringify({ auth_code: code, code_verifier: verifier }),
+  });
+  if (!response.ok) throw new Error(await readError(response));
+  const session = toSession((await response.json()) as SupabaseTokenResponse);
+  if (!session.accessToken) throw new Error("Google sign-in did not return a session.");
+  await persist(session);
+  notify(session);
+  return session;
+}
+
+/**
+ * Sign in with Google using Supabase OAuth via the Chrome extension flow.
+ * Must be called with a transient user gesture (button click).
+ */
+export async function signInWithGoogle(): Promise<AuthSession> {
+  if (!authConfigured) throw new Error("Google sign-in is not configured for this build.");
+  if (typeof chrome === "undefined" || !chrome.identity?.launchWebAuthFlow) {
+    throw new Error("Google sign-in is not available in this environment.");
+  }
+
+  const redirectUri = getOAuthRedirectUrl();
+  const verifier = randomVerifier();
+  const challenge = await pkceChallenge(verifier);
+  const authorizeUrl = new URL(`${SUPABASE_URL.replace(/\/+$/, "")}/auth/v1/authorize`);
+  authorizeUrl.searchParams.set("provider", "google");
+  authorizeUrl.searchParams.set("redirect_to", redirectUri);
+  authorizeUrl.searchParams.set("code_challenge", challenge);
+  authorizeUrl.searchParams.set("code_challenge_method", "S256");
+
+  let responseUrl: string | undefined;
+  try {
+    responseUrl = await chrome.identity.launchWebAuthFlow({
+      url: authorizeUrl.toString(),
+      interactive: true,
+    });
+  } catch (error) {
+    throw new Error(`Google sign-in was cancelled or failed: ${(error as Error).message}`);
+  }
+  if (!responseUrl) throw new Error("Google sign-in was cancelled.");
+
+  const params = parseOAuthRedirect(responseUrl);
+  const oauthError = params.get("error_description") || params.get("error");
+  if (oauthError) throw new Error(oauthError);
+
+  const fragmentToken = params.get("access_token");
+  if (fragmentToken) {
+    const session = toSession({
+      access_token: fragmentToken,
+      refresh_token: params.get("refresh_token") ?? undefined,
+      expires_in: Number(params.get("expires_in") ?? 3600),
+      user: undefined,
+    });
+    // The fragment does not carry the profile; fetch it so the UI can show name/email.
+    const profile = await fetchUser(session.accessToken).catch(() => null);
+    if (profile) session.user = profile;
+    await persist(session);
+    notify(session);
+    return session;
+  }
+
+  const code = params.get("code");
+  if (code) return exchangePkceCode(code, verifier);
+  throw new Error("Google sign-in did not return a session.");
+}
+
+async function fetchUser(accessToken: string): Promise<AuthUser | null> {
+  const response = await fetch(`${SUPABASE_URL.replace(/\/+$/, "")}/auth/v1/user`, {
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) return null;
+  return toAuthUser((await response.json()) as SupabaseUser);
+}
 export async function getAccessToken(): Promise<string | null> {
   const session = await getSession();
   if (!session) return null;

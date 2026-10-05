@@ -30,3 +30,6 @@ scripts/transcript-rnd/results/transcripts/
 .idea/
 .vscode/
 *.log
+
+# Supabase CLI local state
+supabase/.temp/

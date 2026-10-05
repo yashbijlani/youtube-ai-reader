@@ -1,7 +1,10 @@
-import type { Analysis, AnalysisStatus } from "../types";
-import { AlertIcon } from "./Icons";
+import { useState } from "react";
+import type { Analysis, AnalysisStatus, Chapter, Transcript } from "../types";
+import { ChaptersTab } from "./ChaptersTab";
+import { AlertIcon, ChevronIcon, TextIcon } from "./Icons";
 import { MarkdownView } from "./MarkdownView";
 import { TimestampChip } from "./TimestampChip";
+import { TranscriptTab } from "./TranscriptTab";
 
 interface OverviewTabProps {
   analysis: Analysis | null;
@@ -12,6 +15,9 @@ interface OverviewTabProps {
   streamingReading?: boolean;
   quickRead?: string;
   quickReadStreaming?: boolean;
+  chapters?: Chapter[];
+  transcript?: Transcript | null;
+  playbackSeconds?: number | null;
 }
 
 function Skeleton({ lines = 3 }: { lines?: number }) {
@@ -37,7 +43,11 @@ export function OverviewTab({
   streamingReading = false,
   quickRead = "",
   quickReadStreaming = false,
+  chapters = [],
+  transcript = null,
+  playbackSeconds = null,
 }: OverviewTabProps) {
+  const [showTranscript, setShowTranscript] = useState(false);
   const working = analysisStatus === "pending" || analysisStatus === "partial";
   const failed = analysisStatus === "error";
   const hasOverview = Boolean(analysis?.overview);
@@ -128,6 +138,15 @@ export function OverviewTab({
         </>
       ) : null}
 
+      <h2 className="section-title">Chapters</h2>
+      {chapters.length > 0 ? (
+        <ChaptersTab chapters={chapters} playbackSeconds={playbackSeconds} onSeek={onSeek} />
+      ) : working ? (
+        <Skeleton lines={4} />
+      ) : (
+        <p className="muted">No chapters were generated for this video.</p>
+      )}
+
       {hasReading ? (
         <>
           <h2 className="section-title">Detailed reading</h2>
@@ -147,6 +166,29 @@ export function OverviewTab({
             <span>Writing the detailed reading… this appears as it's written.</span>
           </div>
           <Skeleton lines={5} />
+        </>
+      ) : null}
+
+      {transcript ? (
+        <>
+          <button
+            type="button"
+            className="transcript-toggle"
+            aria-expanded={showTranscript}
+            onClick={() => setShowTranscript((value) => !value)}
+          >
+            <TextIcon size={13} />
+            <span>{showTranscript ? "Hide transcript" : "View transcript"}</span>
+            <span className="muted small">{transcript.segments.length} lines</span>
+            <ChevronIcon size={13} direction={showTranscript ? "up" : "down"} />
+          </button>
+          {showTranscript ? (
+            <TranscriptTab
+              transcript={transcript}
+              playbackSeconds={playbackSeconds}
+              onSeek={onSeek}
+            />
+          ) : null}
         </>
       ) : null}
     </div>

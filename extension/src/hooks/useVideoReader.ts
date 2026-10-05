@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, api } from "../lib/api";
 import { sendMessage } from "../lib/messaging";
-import type { ClientTranscriptPayload, VideoInfo, VideoState } from "../types";
+import { hasBrowserTranscript } from "../lib/transcript";
+import type { TranscriptExtractionResult, VideoInfo, VideoState } from "../types";
 
 export function toApiError(error: unknown): ApiError {
   if (error instanceof ApiError) return error;
   return new ApiError("unknown_error", "Something went wrong.");
 }
+
+const LIMIT_CODES = ["free_limit_reached", "quota_exceeded", "subscription_required"];
 
 export interface VideoReader {
   state: VideoState | null;
@@ -60,13 +63,17 @@ export function useVideoReader(
       setLimitReached(false);
       try {
         if (!force) {
-          // Prefer the transcript captured in the user's own browser session;
-          // it avoids server-side YouTube throttling and starts in ~1s.
-          const client = await sendMessage<ClientTranscriptPayload | null>({
-            type: "GET_CLIENT_TRANSCRIPT",
+          // Await the browser capture so we never fall back to server YouTube
+          // fetching when the user's own session already has the captions.
+          const extraction = await sendMessage<TranscriptExtractionResult | null>({
+            type: "EXTRACT_CLIENT_TRANSCRIPT",
             videoId: video.videoId,
           });
-          if (client && (client.content || client.segments?.length)) {
+          const client =
+            extraction && extraction.status === "ok" && hasBrowserTranscript(extraction)
+              ? extraction.payload
+              : null;
+          if (client) {
             try {
               const next = await api.ingest(apiBaseUrl, video.videoId, {
                 title: video.title,
@@ -77,12 +84,21 @@ export function useVideoReader(
                 format: client.format,
                 content: client.content,
                 segments: client.segments,
+                method: client.method,
               });
               setState(next);
               return;
             } catch (err) {
               const apiError = toApiError(err);
               if (apiError.code.startsWith("ai_")) {
+                setError(apiError);
+                return;
+              }
+              if (LIMIT_CODES.includes(apiError.code)) {
+                setLimitReached(true);
+                return;
+              }
+              if (apiError.code === "unauthorized") {
                 setError(apiError);
                 return;
               }
@@ -94,7 +110,7 @@ export function useVideoReader(
         setState(next);
       } catch (err) {
         const apiError = toApiError(err);
-        if (["free_limit_reached", "quota_exceeded", "subscription_required"].includes(apiError.code)) {
+        if (LIMIT_CODES.includes(apiError.code)) {
           setLimitReached(true);
         } else {
           setError(apiError);

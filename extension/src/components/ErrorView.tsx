@@ -1,11 +1,10 @@
 import type { ApiError } from "../lib/api";
-import { AlertIcon, RefreshIcon, SettingsIcon } from "./Icons";
+import { AlertIcon, RefreshIcon } from "./Icons";
 
 interface ErrorViewProps {
   error: ApiError | { code: string; message: string };
   onRetry: () => void;
   onReprocess: () => void;
-  onOpenSettings: () => void;
   busy: boolean;
 }
 
@@ -40,7 +39,7 @@ function hintFor(code: string): string | null {
   }
 }
 
-export function ErrorView({ error, onRetry, onReprocess, onOpenSettings, busy }: ErrorViewProps) {
+export function ErrorView({ error, onRetry, onReprocess, busy }: ErrorViewProps) {
   const hint = hintFor(error.code);
   const isNetwork = error.code === "network_error";
   return (
@@ -60,9 +59,6 @@ export function ErrorView({ error, onRetry, onReprocess, onOpenSettings, busy }:
             Reprocess
           </button>
         ) : null}
-        <button type="button" className="button secondary" onClick={onOpenSettings}>
-          <SettingsIcon size={13} /> Backend
-        </button>
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import {
   getSession,
   onAuthChange,
   signIn as authSignIn,
+  signInWithGoogle as authSignInWithGoogle,
   signOut as authSignOut,
   signUp as authSignUp,
   type AuthSession,
@@ -14,6 +15,7 @@ export interface AuthController {
   session: AuthSession | null;
   loading: boolean;
   error: string | null;
+  signInWithGoogle: () => Promise<boolean>;
   signIn: (email: string, password: string) => Promise<boolean>;
   signUp: (email: string, password: string) => Promise<{ needsConfirmation: boolean } | null>;
   signOut: () => Promise<void>;
@@ -54,6 +56,18 @@ export function useAuth(): AuthController {
     }
   }, []);
 
+  const signInWithGoogle = useCallback(async () => {
+    setError(null);
+    try {
+      const next = await authSignInWithGoogle();
+      setSession(next);
+      return true;
+    } catch (err) {
+      setError((err as Error).message);
+      return false;
+    }
+  }, []);
+
   const signUp = useCallback(async (email: string, password: string) => {
     setError(null);
     try {
@@ -73,5 +87,5 @@ export function useAuth(): AuthController {
 
   const clearError = useCallback(() => setError(null), []);
 
-  return { configured: authConfigured, session, loading, error, signIn, signUp, signOut, clearError };
+  return { configured: authConfigured, session, loading, error, signInWithGoogle, signIn, signUp, signOut, clearError };
 }

@@ -46,7 +46,13 @@ function loadCheckout(): Promise<RazorpayConstructor> {
       if (ctor) resolve(ctor);
       else reject(new Error("Razorpay Checkout failed to initialize."));
     };
-    script.onerror = () => reject(new Error("Could not load Razorpay Checkout."));
+    script.onerror = () =>
+      reject(
+        new Error(
+          "Razorpay Checkout cannot run inside a Manifest V3 extension page. " +
+            "Checkout must be completed on a hosted page.",
+        ),
+      );
     document.head.appendChild(script);
   });
 }

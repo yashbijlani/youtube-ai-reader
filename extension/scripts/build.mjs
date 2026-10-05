@@ -15,7 +15,12 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
 const dist = join(root, "dist");
 const watch = process.argv.includes("--watch");
-const configs = ["vite.config.ts", "vite.background.config.ts", "vite.content.config.ts"];
+const configs = [
+  "vite.config.ts",
+  "vite.background.config.ts",
+  "vite.content.config.ts",
+  "vite.interceptor.config.ts",
+];
 
 function copyStatic() {
   mkdirSync(join(dist, "icons"), { recursive: true });

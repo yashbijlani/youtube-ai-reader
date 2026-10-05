@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { ChaptersTab } from "./components/ChaptersTab";
+import { AccountMenu } from "./components/AccountMenu";
 import { ChatTab } from "./components/ChatTab";
 import { EmptyView } from "./components/EmptyView";
 import { ErrorView } from "./components/ErrorView";
@@ -8,29 +8,28 @@ import { Header } from "./components/Header";
 import { LoadingView } from "./components/LoadingView";
 import { OverviewTab } from "./components/OverviewTab";
 import { Paywall } from "./components/Paywall";
-import { SettingsSheet } from "./components/SettingsSheet";
+import { SignInView } from "./components/SignInView";
 import { Tabs } from "./components/Tabs";
-import { TranscriptTab } from "./components/TranscriptTab";
 import { useChat } from "./hooks/useChat";
 import { useAnalysisStream } from "./hooks/useAnalysisStream";
+import { useAuth } from "./hooks/useAuth";
 import { useEntitlement } from "./hooks/useEntitlement";
 import { useVideoContext } from "./hooks/useVideoContext";
 import { useVideoReader } from "./hooks/useVideoReader";
 import { api } from "./lib/api";
-import { clearAllConversations } from "./lib/chatStore";
 import { sendMessage } from "./lib/messaging";
-import { DEFAULT_API_BASE_URL, getSettings, saveSettings } from "./lib/storage";
+import { DEFAULT_API_BASE_URL, getSettings } from "./lib/storage";
 import type { Analysis, TabId, Transcript } from "./types";
 import "./styles.css";
 
 function App() {
   const [apiBaseUrl, setApiBaseUrl] = useState(DEFAULT_API_BASE_URL);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [tab, setTab] = useState<TabId>("overview");
   const [transcript, setTranscript] = useState<Transcript | null>(null);
 
   const context = useVideoContext();
   const video = context.video;
+  const auth = useAuth();
   const reader = useVideoReader(video, apiBaseUrl, context.requestedVideoId);
   const chat = useChat(video, apiBaseUrl, context.playbackSeconds);
   const entitlement = useEntitlement(apiBaseUrl);
@@ -48,7 +47,7 @@ function App() {
   const ready = state?.status === "ready";
   const guideReady = ready && state?.analysis_status === "ready" && Boolean(state?.analysis);
   const lastVideoRef = useRef<string | null>(null);
-  const userPickedTabRef = useRef(false);
+  const authKeyRef = useRef<string | null | undefined>(undefined);
 
   const live = useAnalysisStream(
     video,
@@ -87,27 +86,34 @@ function App() {
     };
   }, [ready, video?.videoId, apiBaseUrl]);
 
-  // Reset tab choice when the video changes.
+  // Reset the tab when the video changes; Overview is always the landing page.
   useEffect(() => {
     const id = video?.videoId ?? null;
     if (id !== lastVideoRef.current) {
       lastVideoRef.current = id;
-      userPickedTabRef.current = false;
       setTab("overview");
     }
   }, [video?.videoId]);
 
-  // Land on Chat while the guide is still being written; switch to Overview
-  // once (and only once) the guide is ready, unless the user picked a tab.
+  // When the signed-in account changes (sign in, switch, sign out), discard any
+  // stale free-limit/error state so the page reflects the new credentials.
   useEffect(() => {
-    if (!ready || userPickedTabRef.current) return;
-    setTab(guideReady ? "overview" : "chat");
-  }, [ready, guideReady]);
+    if (auth.loading) return;
+    const current = auth.session?.user.id ?? null;
+    if (authKeyRef.current === undefined) {
+      authKeyRef.current = current; // first settled value (session restore)
+      return;
+    }
+    if (authKeyRef.current === current) return;
+    authKeyRef.current = current;
+    reader.clearLimitReached();
+    reader.clearError();
+    setTab("overview");
+    if (video) void reader.refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth.loading, auth.session?.user.id, video?.videoId]);
 
-  const handleTabChange = useCallback((next: TabId) => {
-    userPickedTabRef.current = true;
-    setTab(next);
-  }, []);
+  const handleTabChange = useCallback((next: TabId) => setTab(next), []);
 
   const seek = useCallback(
     (seconds: number) => {
@@ -118,11 +124,9 @@ function App() {
 
   const counts = useMemo(
     () => ({
-      chapters: mergedAnalysis?.chapters.length ?? 0,
-      transcript: transcript?.segments.length ?? 0,
       chat: chat.messages.length,
     }),
-    [mergedAnalysis?.chapters.length, transcript?.segments.length, chat.messages.length],
+    [chat.messages.length],
   );
 
   const handleCancel = useCallback(() => {
@@ -130,10 +134,12 @@ function App() {
     void api.cancel(apiBaseUrl, video.videoId).finally(() => void reader.refresh());
   }, [apiBaseUrl, reader, video]);
 
-  const handleSaveUrl = useCallback(async (url: string) => {
-    setApiBaseUrl(url);
-    await saveSettings({ apiBaseUrl: url });
-  }, []);
+  const switchAccount = useCallback(async () => {
+    await auth.signOut();
+    await auth.signInWithGoogle();
+  }, [auth]);
+
+  const needsSignIn = auth.configured && !auth.loading && !auth.session;
 
   let body: React.ReactNode;
   if (!video) {
@@ -153,11 +159,13 @@ function App() {
         used={entitlement.used}
         limit={entitlement.limit}
         onUpgrade={entitlement.openPayment}
-        onTrial={entitlement.openTrial}
-        onManage={entitlement.manage}
+        onSwitchAccount={() => void switchAccount()}
         onDismiss={reader.clearLimitReached}
+        upgradeError={entitlement.error}
       />
     );
+  } else if (needsSignIn) {
+    body = <SignInView auth={auth} />;
   } else if (reader.error) {
     body = (
       <ErrorView
@@ -165,7 +173,6 @@ function App() {
         busy={reader.starting}
         onRetry={() => void reader.process(false)}
         onReprocess={() => void reader.process(true)}
-        onOpenSettings={() => setSettingsOpen(true)}
       />
     );
   } else if (state?.status === "error") {
@@ -176,7 +183,6 @@ function App() {
         busy={reader.starting}
         onRetry={() => void reader.process(false)}
         onReprocess={() => void reader.process(true)}
-        onOpenSettings={() => setSettingsOpen(true)}
       />
     );
   } else if (state?.status === "processing") {
@@ -204,35 +210,16 @@ function App() {
                 streamingReading={live.streaming && !state?.analysis?.detailed_reading}
                 quickRead={live.quickRead}
                 quickReadStreaming={live.quickReadStreaming}
-              />
-            ) : null}
-            {tab === "chapters" ? (
-              <ChaptersTab
                 chapters={mergedAnalysis?.chapters ?? []}
+                transcript={transcript}
                 playbackSeconds={context.playbackSeconds}
-                onSeek={seek}
               />
-            ) : null}
-            {tab === "transcript" ? (
-              transcript ? (
-                <TranscriptTab
-                  transcript={transcript}
-                  playbackSeconds={context.playbackSeconds}
-                  onSeek={seek}
-                />
-              ) : (
-                <div className="center-state">
-                  <p>Loading transcript…</p>
-                </div>
-              )
             ) : null}
             {tab === "chat" ? (
               <ChatTab
-                video={video}
                 controller={chat}
                 onSeek={seek}
                 playbackSeconds={context.playbackSeconds}
-                onOpenSettings={() => setSettingsOpen(true)}
                 ready={ready}
                 guideReady={guideReady}
               />
@@ -262,31 +249,21 @@ function App() {
           state={state}
           onRefresh={() => void reader.process(true)}
           refreshing={reader.starting}
-          onOpenSettings={() => setSettingsOpen(true)}
+          account={
+            <AccountMenu
+              auth={auth}
+              plan={{
+                paid: entitlement.paid,
+                used: entitlement.used,
+                limit: entitlement.limit,
+                remaining: entitlement.remaining,
+                onUpgrade: entitlement.openPayment,
+              }}
+            />
+          }
         />
       ) : null}
       {body}
-      <SettingsSheet
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        apiBaseUrl={apiBaseUrl}
-        onSaveApiBaseUrl={handleSaveUrl}
-        video={video}
-        hasConversation={chat.messages.length > 0}
-        onClearConversation={() => void chat.clear()}
-        onClearAllConversations={() => {
-          void clearAllConversations().then(() => chat.clear());
-        }}
-        plan={{
-          paid: entitlement.paid,
-          used: entitlement.used,
-          limit: entitlement.limit,
-          remaining: entitlement.remaining,
-          onUpgrade: entitlement.openPayment,
-          onManage: entitlement.manage,
-          onTrial: entitlement.openTrial,
-        }}
-      />
     </div>
   );
 }

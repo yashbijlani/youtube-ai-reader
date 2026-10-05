@@ -28,13 +28,9 @@ interface PlayerLike extends HTMLElement {
   seekTo?: (seconds: number, allowSeekAhead: boolean) => void;
 }
 
-function player(): PlayerLike | null {
-  return document.querySelector("#movie_player") as PlayerLike | null;
-}
-
-/** Inspect the player response caption tracks (MAIN world). */
+/** Inspect the player response caption tracks (MAIN world, self-contained). */
 export function inspectCaptionTracks(prefLang = "en"): CaptionTrackInfo {
-  const p = player();
+  const p = document.querySelector("#movie_player") as PlayerLike | null;
   const pr =
     (p && typeof p.getPlayerResponse === "function" ? p.getPlayerResponse() : undefined) ||
     (window as unknown as { ytInitialPlayerResponse?: ReturnType<NonNullable<PlayerLike["getPlayerResponse"]>> })
@@ -96,6 +92,13 @@ export function triggerCaptionRequest(prefLang = "en"): CaptionTrackInfo {
 export interface DomCapturedSegment {
   start: number;
   text: string;
+}
+
+/** Media duration in seconds (MAIN world, self-contained). 0 when unknown. */
+export function getMediaDuration(): number {
+  const video = document.querySelector("video");
+  const duration = video?.duration;
+  return typeof duration === "number" && Number.isFinite(duration) && duration > 0 ? duration : 0;
 }
 
 /**

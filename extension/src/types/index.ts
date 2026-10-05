@@ -162,7 +162,7 @@ export interface Conversation {
   updatedAt: number;
 }
 
-export type TabId = "overview" | "chapters" | "transcript" | "chat";
+export type TabId = "overview" | "chat";
 
 // ---------------------------------------------------------------- messaging
 
@@ -174,6 +174,7 @@ export type ContentToBackground =
 export type PanelToBackground =
   | { type: "GET_CONTEXT" }
   | { type: "GET_CLIENT_TRANSCRIPT"; videoId: string }
+  | { type: "EXTRACT_CLIENT_TRANSCRIPT"; videoId: string }
   | { type: "SEEK_TO"; seconds: number; videoId?: string }
   | { type: "CONSUME_REQUEST" }
   | { type: "OPEN_PANEL" };
@@ -187,6 +188,12 @@ export interface ClientTranscriptPayload {
   segments?: Array<{ start: number; end: number; text: string }>;
   method?: "main_world_intercept" | "caption_dom";
 }
+
+/** Result of an awaited browser transcript extraction. */
+export type TranscriptExtractionResult =
+  | { status: "ok"; payload: ClientTranscriptPayload }
+  | { status: "no_captions" }
+  | { status: "error"; message?: string };
 
 export type BackgroundToContent = { type: "SEEK_TO"; seconds: number };
 

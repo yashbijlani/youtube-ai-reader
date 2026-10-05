@@ -4,12 +4,19 @@ interface PaywallProps {
   used: number;
   limit: number;
   onUpgrade: () => void;
-  onTrial: () => void;
-  onManage: () => void;
+  onSwitchAccount: () => void;
   onDismiss: () => void;
+  upgradeError?: string | null;
 }
 
-export function Paywall({ used, limit, onUpgrade, onTrial, onManage, onDismiss }: PaywallProps) {
+export function Paywall({
+  used,
+  limit,
+  onUpgrade,
+  onSwitchAccount,
+  onDismiss,
+  upgradeError,
+}: PaywallProps) {
   return (
     <div className="center-state">
       <span className="state-icon">
@@ -23,13 +30,11 @@ export function Paywall({ used, limit, onUpgrade, onTrial, onManage, onDismiss }
         <button type="button" className="button primary" onClick={onUpgrade}>
           Upgrade to Pro
         </button>
-        <button type="button" className="button secondary" onClick={onTrial}>
-          Start 7-day free trial
-        </button>
-        <button type="button" className="button secondary" onClick={onManage}>
-          Already subscribed? Sign in
+        <button type="button" className="button secondary" onClick={onSwitchAccount}>
+          Sign in with another account
         </button>
       </div>
+      {upgradeError ? <div className="health-line bad">{upgradeError}</div> : null}
       <p className="muted small">
         {used}/{limit} free videos used · cancel anytime
       </p>
