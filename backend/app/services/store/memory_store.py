@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import copy
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -25,6 +26,10 @@ class MemoryStore(Store):
         self.subscriptions: dict[str, dict[str, Any]] = {}
         self.chat: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
         self.webhooks: set[str] = set()
+        self._locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
+
+    def _lock(self, user_id: str) -> asyncio.Lock:
+        return self._locks[user_id]
 
     async def ensure_user(self, user_id: str, email: str | None = None) -> dict[str, Any]:
         user = self.users.get(user_id)
@@ -107,6 +112,72 @@ class MemoryStore(Store):
         row["ai_cost_usd"] = round(row["ai_cost_usd"] + ai_cost_usd, 8)
         row["updated_at"] = _now()
         return copy.deepcopy(row)
+
+    def _is_pro(self, user_id: str) -> bool:
+        return self.subscriptions.get(user_id, {}).get("status") == "ACTIVE"
+
+    async def consume_video_quota(
+        self,
+        user_id: str,
+        video_id: str,
+        *,
+        lifetime_limit: int,
+        monthly_limit: int,
+        period: str,
+    ) -> dict[str, Any]:
+        async with self._lock(user_id):
+            if self._is_pro(user_id):
+                return {"allowed": True, "reason": "pro", "used": 0, "remaining": -1, "limit": -1}
+            if not self.users.get(user_id):
+                self.users[user_id] = {"id": user_id, "plan": "free", "created_at": _now(), "updated_at": _now()}
+            used = self.used_videos[user_id]
+            lifetime = len(used)
+            if video_id in used:
+                return {
+                    "allowed": True,
+                    "reason": "already_used",
+                    "used": lifetime,
+                    "remaining": max(lifetime_limit - lifetime, 0),
+                    "limit": lifetime_limit,
+                }
+            if lifetime >= lifetime_limit:
+                return {"allowed": False, "reason": "lifetime_limit", "used": lifetime, "remaining": 0, "limit": lifetime_limit}
+            period_row = self.periods.setdefault(
+                (user_id, period), {"videos_used": 0, "chat_messages": 0, "ai_cost_usd": 0.0}
+            )
+            if period_row["videos_used"] >= monthly_limit:
+                return {"allowed": False, "reason": "monthly_limit", "used": lifetime, "remaining": 0, "limit": monthly_limit}
+            used.add(video_id)
+            period_row["videos_used"] += 1
+            period_row["updated_at"] = _now()
+            return {
+                "allowed": True,
+                "reason": "ok",
+                "used": lifetime + 1,
+                "remaining": max(lifetime_limit - (lifetime + 1), 0),
+                "limit": lifetime_limit,
+            }
+
+    async def consume_chat_quota(
+        self, user_id: str, *, monthly_limit: int, period: str
+    ) -> dict[str, Any]:
+        async with self._lock(user_id):
+            if self._is_pro(user_id):
+                return {"allowed": True, "reason": "pro", "used": 0, "remaining": -1, "limit": -1}
+            period_row = self.periods.setdefault(
+                (user_id, period), {"videos_used": 0, "chat_messages": 0, "ai_cost_usd": 0.0}
+            )
+            if period_row["chat_messages"] >= monthly_limit:
+                return {"allowed": False, "reason": "chat_limit", "used": period_row["chat_messages"], "remaining": 0, "limit": monthly_limit}
+            period_row["chat_messages"] += 1
+            period_row["updated_at"] = _now()
+            return {
+                "allowed": True,
+                "reason": "ok",
+                "used": period_row["chat_messages"],
+                "remaining": max(monthly_limit - period_row["chat_messages"], 0),
+                "limit": monthly_limit,
+            }
 
     async def get_subscription(self, user_id: str) -> dict[str, Any] | None:
         row = self.subscriptions.get(user_id)

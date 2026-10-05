@@ -144,3 +144,16 @@ class SupabaseClient:
             params=self._query(filters, None),
             headers=self._headers(returning=False, upsert=False),
         )
+
+    async def rpc(self, function: str, params: dict[str, Any]) -> Any:
+        response = await self._request(
+            "POST",
+            f"/rpc/{function}",
+            headers={
+                "apikey": self.service_key,
+                "Authorization": f"Bearer {self.service_key}",
+                "Content-Type": "application/json",
+            },
+            json=params,
+        )
+        return response.json()

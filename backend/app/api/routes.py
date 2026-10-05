@@ -30,6 +30,7 @@ from app.models.schemas import (
     VideoState,
 )
 from app.services.metrics import metrics
+from app.services.quota import QuotaService
 from app.services.rate_limit import limiter
 from app.services.usage import UsageStore
 from app.services.video_service import VideoService
@@ -89,6 +90,29 @@ def enforce_free_limit(request: Request, video_id: str) -> None:
     allowed, remaining = store.can_process(install_id(request) or "", video_id)
     if not allowed:
         raise FreeLimitReached(store.limit, remaining)
+
+
+async def enforce_video_quota(request: Request, video_id: str) -> None:
+    """Server-side quota enforcement.
+
+    Authenticated users are enforced from the database (atomic reservation).
+    Anonymous requests only occur in development (``AUTH_REQUIRED=false``) and
+    fall back to the legacy install-id limit.
+    """
+    user_id = verified_user_id(request)
+    if user_id:
+        quota = QuotaService(get_settings(request), get_store(request))
+        await quota.reserve_video(user_id, video_id, current_period())
+        return
+    enforce_free_limit(request, video_id)
+    get_usage(request).record_video(install_id(request) or "", video_id)
+
+
+async def enforce_chat_quota(request: Request) -> None:
+    user_id = verified_user_id(request)
+    if user_id:
+        quota = QuotaService(get_settings(request), get_store(request))
+        await quota.reserve_chat(user_id, current_period())
 
 
 def client_ip(request: Request, settings: Settings) -> str:
@@ -204,12 +228,11 @@ async def process_video(request: Request, payload: ProcessRequest) -> VideoState
     settings = get_settings(request)
     await enforce_rate(request, "process", settings.rate_limit_process_per_hour, 3600)
     video_id = extract_video_id(payload.youtube_url)
-    enforce_free_limit(request, video_id)
+    await enforce_video_quota(request, video_id)
     service = get_service(request)
     state = await service.process(
         payload.youtube_url, force=payload.force, user_id=current_user_id(request)
     )
-    get_usage(request).record_video(install_id(request) or "", video_id)
     return state
 
 
@@ -240,10 +263,9 @@ async def ingest_transcript(request: Request, video_id: str, payload: IngestRequ
     settings = get_settings(request)
     validate_video_id(video_id)
     await enforce_rate(request, "process", settings.rate_limit_process_per_hour, 3600)
-    enforce_free_limit(request, video_id)
+    await enforce_video_quota(request, video_id)
     service = get_service(request)
     state = await service.ingest(video_id, payload, user_id=current_user_id(request))
-    get_usage(request).record_video(install_id(request) or "", video_id)
     return state
 
 
@@ -290,6 +312,7 @@ async def summarize(request: Request, video_id: str):
     settings = get_settings(request)
     validate_video_id(video_id)
     await enforce_rate(request, "chat", settings.rate_limit_chat_per_hour, 3600)
+    await enforce_chat_quota(request)
     service = get_service(request)
 
     generator = service.stream_summary(video_id, user_id=current_user_id(request))
@@ -380,6 +403,7 @@ async def chat(request: Request, video_id: str, payload: ChatRequest):
     settings = get_settings(request)
     validate_video_id(video_id)
     await enforce_rate(request, "chat", settings.rate_limit_chat_per_hour, 3600)
+    await enforce_chat_quota(request)
     if len(payload.message) > settings.max_chat_message_chars:
         payload.message = payload.message[: settings.max_chat_message_chars]
     service = get_service(request)

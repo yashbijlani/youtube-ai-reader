@@ -89,6 +89,30 @@ class Store(ABC):
     ) -> dict[str, Any]:
         ...
 
+    @abstractmethod
+    async def consume_video_quota(
+        self,
+        user_id: str,
+        video_id: str,
+        *,
+        lifetime_limit: int,
+        monthly_limit: int,
+        period: str,
+    ) -> dict[str, Any]:
+        """Atomically reserve one video for a free user.
+
+        Returns ``{allowed, reason, used, remaining, limit}``. Active
+        subscribers are always allowed.
+        """
+        ...
+
+    @abstractmethod
+    async def consume_chat_quota(
+        self, user_id: str, *, monthly_limit: int, period: str
+    ) -> dict[str, Any]:
+        """Atomically reserve one chat message for a free user."""
+        ...
+
     # -------------------------------------------------------- subscriptions
     @abstractmethod
     async def get_subscription(self, user_id: str) -> dict[str, Any] | None:

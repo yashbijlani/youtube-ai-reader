@@ -269,6 +269,50 @@ class SupabaseStore(Store):
         )
         return rows[0] if rows else row
 
+    async def consume_video_quota(
+        self,
+        user_id: str,
+        video_id: str,
+        *,
+        lifetime_limit: int,
+        monthly_limit: int,
+        period: str,
+    ) -> dict[str, Any]:
+        result = await self.client.rpc(
+            "consume_video_quota",
+            {
+                "p_user": user_id,
+                "p_video": video_id,
+                "p_lifetime_limit": lifetime_limit,
+                "p_monthly_limit": monthly_limit,
+                "p_period": period,
+            },
+        )
+        row = result[0] if isinstance(result, list) and result else (result or {})
+        return {
+            "allowed": bool(row.get("allowed")),
+            "reason": row.get("reason"),
+            "used": int(row.get("used") or 0),
+            "remaining": int(row.get("remaining") or 0),
+            "limit": int(row.get("limit_value") if row.get("limit_value") is not None else -1),
+        }
+
+    async def consume_chat_quota(
+        self, user_id: str, *, monthly_limit: int, period: str
+    ) -> dict[str, Any]:
+        result = await self.client.rpc(
+            "consume_chat_quota",
+            {"p_user": user_id, "p_monthly_limit": monthly_limit, "p_period": period},
+        )
+        row = result[0] if isinstance(result, list) and result else (result or {})
+        return {
+            "allowed": bool(row.get("allowed")),
+            "reason": row.get("reason"),
+            "used": int(row.get("used") or 0),
+            "remaining": int(row.get("remaining") or 0),
+            "limit": int(row.get("limit_value") if row.get("limit_value") is not None else -1),
+        }
+
     # -------------------------------------------------------- subscriptions
     async def get_subscription(self, user_id: str) -> dict[str, Any] | None:
         return await self._single("subscriptions", filters=[("user_id", "eq", user_id)])

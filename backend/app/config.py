@@ -138,6 +138,7 @@ class Settings(BaseSettings):
     # --------------------------------------------------------- quotas
     free_video_limit: int = Field(default=3, alias="FREE_VIDEO_LIMIT")
     free_monthly_video_limit: int = Field(default=5, alias="FREE_MONTHLY_VIDEO_LIMIT")
+    free_monthly_chat_limit: int = Field(default=200, alias="FREE_MONTHLY_CHAT_LIMIT")
     usage_enabled: bool = Field(default=True, alias="USAGE_ENABLED")
     quota_enabled: bool = Field(default=True, alias="QUOTA_ENABLED")
 

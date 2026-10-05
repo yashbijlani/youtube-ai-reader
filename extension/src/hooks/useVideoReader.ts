@@ -94,7 +94,7 @@ export function useVideoReader(
         setState(next);
       } catch (err) {
         const apiError = toApiError(err);
-        if (apiError.code === "free_limit_reached") {
+        if (["free_limit_reached", "quota_exceeded", "subscription_required"].includes(apiError.code)) {
           setLimitReached(true);
         } else {
           setError(apiError);
