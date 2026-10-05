@@ -211,7 +211,7 @@ export function toClientPayload(result: BrowserTranscriptResult, videoId = "") {
     segments: result.json3
       ? undefined
       : result.segments.map((s) => ({ start: s.start, end: s.end, text: s.text })),
-    method: result.method === "caption_dom" ? ("caption_dom" as const) : ("main_world_intercept" as const),
+    method: result.method === "caption_dom" ? ("caption_dom" as const) : ("browser_intercept" as const),
   };
 }
 

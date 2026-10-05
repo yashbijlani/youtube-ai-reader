@@ -276,6 +276,29 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   return false;
 });
 
+// ---------------------------------------------------- caption capture bridge
+// The MAIN-world interceptor (interceptor.js) posts the player's own caption
+// response. Forward it to the background as a second, independent capture
+// channel so acquisition does not depend solely on chrome.scripting reads.
+// Security: validate source/type and forward only the caption text.
+window.addEventListener("message", (event) => {
+  if (event.source !== window) return;
+  const data = event.data as
+    | { source?: string; type?: string; text?: unknown; hasPot?: unknown; paramKeys?: unknown }
+    | undefined;
+  if (!data || data.source !== "yair-rnd" || data.type !== "caption") return;
+  if (typeof data.text !== "string" || data.text.length === 0) return;
+  if (!currentVideoId) return;
+  void sendMessage({
+    type: "CAPTION_CAPTURED",
+    videoId: currentVideoId,
+    text: data.text,
+    hasPot: Boolean(data.hasPot),
+    bytes: data.text.length,
+    paramKeys: Array.isArray(data.paramKeys) ? (data.paramKeys as string[]) : [],
+  });
+});
+
 // ------------------------------------------------------------- playback
 
 document.addEventListener(

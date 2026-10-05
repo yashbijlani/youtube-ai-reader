@@ -147,6 +147,80 @@ async def test_decorate_status_expires_old_subscription() -> None:
     assert status["active"] is False
 
 
+ORDER = {"id": "order_abc123", "amount": 49900, "currency": "INR", "status": "paid", "notes": {"user_id": "user-1"}}
+
+
+def _order_client():
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "GET" and "/orders/" in str(request.url):
+            return httpx.Response(200, json=ORDER)
+        if request.method == "POST" and str(request.url).endswith("/orders"):
+            return httpx.Response(200, json=ORDER)
+        return httpx.Response(404, json={})
+
+    return httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="https://api.razorpay.com/v1")
+
+
+async def test_order_public_exposes_only_safe_fields() -> None:
+    client = _order_client()
+    service = BillingService(_settings(), MemoryStore(), client=client)
+    order = await service.order_public("order_abc123")
+    assert order["order_id"] == "order_abc123"
+    assert order["key_id"] == "rzp_test_key"
+    assert order["amount"] == 49900
+    assert "notes" not in order
+    await client.aclose()
+
+
+async def test_verify_public_activates_from_order_notes_and_is_idempotent() -> None:
+    store = MemoryStore()
+    client = _order_client()
+    service = BillingService(_settings(), store, client=client)
+    signature = _payment_sig("order_abc123", "pay_hosted")
+    result = await service.verify_public("order_abc123", "pay_hosted", signature)
+    assert result["ok"] is True
+    assert (await store.get_subscription("user-1"))["status"] == "ACTIVE"
+    assert (await store.get_user("user-1"))["plan"] == "pro"
+    # Replay is ignored.
+    again = await service.verify_public("order_abc123", "pay_hosted", signature)
+    assert again.get("duplicate") is True
+    await client.aclose()
+
+
+async def test_verify_public_rejects_bad_signature_and_bad_order_id() -> None:
+    store = MemoryStore()
+    client = _order_client()
+    service = BillingService(_settings(), store, client=client)
+    with pytest.raises(Forbidden):
+        await service.verify_public("order_abc123", "pay_hosted", "not-a-signature")
+    with pytest.raises(Forbidden):
+        await service.order_public("order_bad!id")
+    await client.aclose()
+
+
+async def test_hosted_checkout_route_is_public_and_serves_page(tmp_path) -> None:
+    from fastapi.testclient import TestClient
+
+    from app.main import create_app
+
+    settings = Settings(_env_file=None)
+    settings.gemini_api_key = "test-key"
+    settings.data_dir = tmp_path
+    settings.auth_required = True
+    settings.supabase_jwt_secret = "jwt-secret"
+    settings.razorpay_key_id = "rzp_test_key"
+    settings.razorpay_key_secret = KEY_SECRET
+    settings.rate_limit_general_per_minute = 0
+
+    app = create_app(settings)
+    with TestClient(app) as client:
+        page = client.get("/api/billing/checkout?order_id=order_abc123")
+        assert page.status_code == 200
+        assert "checkout.razorpay.com" in page.text
+        # Public order endpoint validates the id (no Razorpay creds needed to 403).
+        assert client.get("/api/billing/order/bad-id").status_code == 403
+
+
 async def test_api_webhook_and_billing_endpoints(tmp_path) -> None:
     """Webhook is public but signature-verified; checkout requires auth."""
     import jwt

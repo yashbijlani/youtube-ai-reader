@@ -175,4 +175,27 @@ describe("Google sign-in", () => {
     launchWebAuthFlow.mockResolvedValue(undefined);
     await expect(auth.signInWithGoogle()).rejects.toThrow(/cancelled/i);
   });
+
+  it("dedupes concurrent Google flows into one", async () => {
+    let resolveFlow: (value: string | undefined) => void = () => {};
+    launchWebAuthFlow.mockImplementation(
+      () => new Promise<string | undefined>((resolve) => (resolveFlow = resolve)),
+    );
+    vi.stubGlobal("fetch", vi.fn(async () => userResponse()));
+    const first = auth.signInWithGoogle();
+    const second = auth.signInWithGoogle();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(launchWebAuthFlow).toHaveBeenCalledTimes(1);
+    resolveFlow(`${auth.getOAuthRedirectUrl()}#access_token=shared-token`);
+    const [a, b] = await Promise.all([first, second]);
+    expect(a.accessToken).toBe("shared-token");
+    expect(b.accessToken).toBe("shared-token");
+  });
+
+  it("treats 'only one web auth flow' as a silent cancel", async () => {
+    launchWebAuthFlow.mockRejectedValue(
+      new Error("Only one web auth flow is allowed at a time."),
+    );
+    await expect(auth.signInWithGoogle()).rejects.toBeInstanceOf(auth.SignInCancelledError);
+  });
 });

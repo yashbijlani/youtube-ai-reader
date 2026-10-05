@@ -169,15 +169,23 @@ export type TabId = "overview" | "chat";
 export type ContentToBackground =
   | { type: "VIDEO_CHANGED"; video: VideoInfo | null }
   | { type: "PLAYBACK_TIME"; videoId: string; seconds: number }
-  | { type: "READ_WITH_AI_REQUESTED"; video: VideoInfo };
+  | { type: "READ_WITH_AI_REQUESTED"; video: VideoInfo }
+  | {
+      type: "CAPTION_CAPTURED";
+      videoId: string | null;
+      text: string;
+      hasPot: boolean;
+      bytes: number;
+      paramKeys: string[];
+    };
 
 export type PanelToBackground =
-  | { type: "GET_CONTEXT" }
+  | { type: "GET_CONTEXT"; tabId?: number | null }
   | { type: "GET_CLIENT_TRANSCRIPT"; videoId: string }
-  | { type: "EXTRACT_CLIENT_TRANSCRIPT"; videoId: string }
-  | { type: "SEEK_TO"; seconds: number; videoId?: string }
-  | { type: "CONSUME_REQUEST" }
-  | { type: "OPEN_PANEL" };
+  | { type: "EXTRACT_CLIENT_TRANSCRIPT"; videoId: string; tabId?: number | null }
+  | { type: "SEEK_TO"; seconds: number; videoId?: string; tabId?: number | null }
+  | { type: "CONSUME_REQUEST"; tabId?: number | null }
+  | { type: "OPEN_PANEL"; tabId?: number | null };
 
 export interface ClientTranscriptPayload {
   videoId: string;
@@ -186,7 +194,7 @@ export interface ClientTranscriptPayload {
   format: "json3" | "segments";
   content?: string;
   segments?: Array<{ start: number; end: number; text: string }>;
-  method?: "main_world_intercept" | "caption_dom";
+  method?: "browser_intercept" | "caption_dom";
 }
 
 /** Result of an awaited browser transcript extraction. */
@@ -199,6 +207,7 @@ export type BackgroundToContent = { type: "SEEK_TO"; seconds: number };
 
 export type BackgroundBroadcast = {
   type: "CONTEXT_UPDATED";
+  tabId: number | null;
   context: VideoContextSnapshot;
   requestedVideoId: string | null;
 };

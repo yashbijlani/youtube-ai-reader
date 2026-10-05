@@ -233,8 +233,28 @@ async function exchangePkceCode(code: string, verifier: string): Promise<AuthSes
 /**
  * Sign in with Google using Supabase OAuth via the Chrome extension flow.
  * Must be called with a transient user gesture (button click).
+ *
+ * Concurrent calls share one flow: Chrome allows only one web auth flow at a
+ * time, so a second launch would otherwise fail spuriously.
  */
-export async function signInWithGoogle(): Promise<AuthSession> {
+let googleFlow: Promise<AuthSession> | null = null;
+
+export class SignInCancelledError extends Error {
+  constructor() {
+    super("Sign-in was cancelled.");
+    this.name = "SignInCancelledError";
+  }
+}
+
+export function signInWithGoogle(): Promise<AuthSession> {
+  if (googleFlow) return googleFlow;
+  googleFlow = runGoogleSignIn().finally(() => {
+    googleFlow = null;
+  });
+  return googleFlow;
+}
+
+async function runGoogleSignIn(): Promise<AuthSession> {
   if (!authConfigured) throw new Error("Google sign-in is not configured for this build.");
   if (typeof chrome === "undefined" || !chrome.identity?.launchWebAuthFlow) {
     throw new Error("Google sign-in is not available in this environment.");
@@ -256,9 +276,14 @@ export async function signInWithGoogle(): Promise<AuthSession> {
       interactive: true,
     });
   } catch (error) {
-    throw new Error(`Google sign-in was cancelled or failed: ${(error as Error).message}`);
+    const message = (error as Error)?.message ?? String(error);
+    // User closed the window, or another flow is still finishing: not an error.
+    if (/cancel|only one web auth flow|user (denied|closed)|did not approve/i.test(message)) {
+      throw new SignInCancelledError();
+    }
+    throw new Error(message);
   }
-  if (!responseUrl) throw new Error("Google sign-in was cancelled.");
+  if (!responseUrl) throw new SignInCancelledError();
 
   const params = parseOAuthRedirect(responseUrl);
   const oauthError = params.get("error_description") || params.get("error");

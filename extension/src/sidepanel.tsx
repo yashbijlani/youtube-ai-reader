@@ -30,7 +30,7 @@ function App() {
   const context = useVideoContext();
   const video = context.video;
   const auth = useAuth();
-  const reader = useVideoReader(video, apiBaseUrl, context.requestedVideoId);
+  const reader = useVideoReader(video, apiBaseUrl, context.requestedVideoId, context.tabId);
   const chat = useChat(video, apiBaseUrl, context.playbackSeconds);
   const entitlement = useEntitlement(apiBaseUrl);
 
@@ -43,7 +43,10 @@ function App() {
     void getSettings().then((settings) => setApiBaseUrl(settings.apiBaseUrl));
   }, []);
 
-  const state = reader.state;
+  const rawState = reader.state;
+  // Never render a state that belongs to a different video than the tab's.
+  const state =
+    rawState && video && rawState.video_id !== video.videoId ? null : rawState;
   const ready = state?.status === "ready";
   const guideReady = ready && state?.analysis_status === "ready" && Boolean(state?.analysis);
   const lastVideoRef = useRef<string | null>(null);
@@ -117,9 +120,9 @@ function App() {
 
   const seek = useCallback(
     (seconds: number) => {
-      void sendMessage({ type: "SEEK_TO", seconds, videoId: video?.videoId });
+      void sendMessage({ type: "SEEK_TO", seconds, videoId: video?.videoId, tabId: context.tabId });
     },
-    [video?.videoId],
+    [video?.videoId, context.tabId],
   );
 
   const counts = useMemo(
@@ -146,10 +149,10 @@ function App() {
     body = (
       <div className="center-state">
         <span className="state-icon">▶</span>
-        <h3>Open a YouTube video</h3>
+        <h3>Turned off</h3>
         <p>
-          Navigate to any YouTube watch page and click <strong>✨ Read with AI</strong> to
-          build a reading experience for it.
+          YouTube AI Reader only works on YouTube watch pages. Open a video and click{" "}
+          <strong>✨ Read with AI</strong>.
         </p>
       </div>
     );

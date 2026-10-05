@@ -27,6 +27,7 @@ export function useVideoReader(
   video: VideoInfo | null,
   apiBaseUrl: string,
   requestedVideoId: string | null,
+  panelTabId: number | null,
 ): VideoReader {
   const [state, setState] = useState<VideoState | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
@@ -68,9 +69,13 @@ export function useVideoReader(
           const extraction = await sendMessage<TranscriptExtractionResult | null>({
             type: "EXTRACT_CLIENT_TRANSCRIPT",
             videoId: video.videoId,
+            tabId: panelTabId,
           });
           const client =
-            extraction && extraction.status === "ok" && hasBrowserTranscript(extraction)
+            extraction &&
+            extraction.status === "ok" &&
+            hasBrowserTranscript(extraction) &&
+            (!extraction.payload.videoId || extraction.payload.videoId === video.videoId)
               ? extraction.payload
               : null;
           if (client) {
@@ -119,7 +124,7 @@ export function useVideoReader(
         setStarting(false);
       }
     },
-    [apiBaseUrl, video],
+    [apiBaseUrl, video, panelTabId],
   );
 
   // Load state when the video changes.
@@ -147,10 +152,10 @@ export function useVideoReader(
     if (!video || !requestedVideoId || requestedVideoId !== video.videoId) return;
     if (starting) return;
     if (state?.status === "processing" || state?.status === "ready") {
-      void sendMessage({ type: "CONSUME_REQUEST" });
+      void sendMessage({ type: "CONSUME_REQUEST", tabId: panelTabId });
       return;
     }
-    void sendMessage({ type: "CONSUME_REQUEST" });
+    void sendMessage({ type: "CONSUME_REQUEST", tabId: panelTabId });
     void process(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestedVideoId, video?.videoId]);

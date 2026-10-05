@@ -133,7 +133,7 @@ export const api = {
       format: "json3" | "segments";
       content?: string;
       segments?: Array<{ start: number; end: number; text: string }>;
-      method?: "main_world_intercept" | "caption_dom";
+      method?: "browser_intercept" | "caption_dom";
     },
   ): Promise<VideoState> {
     return request<VideoState>(baseUrl, `/api/videos/${videoId}/ingest`, {

@@ -166,6 +166,8 @@ class VideoService:
         )
 
     def _load_cached_state(self, video_id: str) -> VideoState | None:
+        if not self._cache_current(video_id):
+            return None
         meta = self._load_meta(video_id)
         transcript_raw = self.cache.read_json(video_id, "transcript")
         analysis = self._load_analysis(video_id)
@@ -321,7 +323,23 @@ class VideoService:
         job.task = asyncio.create_task(self._run_job(job, force=force))
         return self._state_from_job(job)
 
+    def _cache_current(self, video_id: str) -> bool:
+        """A cached entry is only reusable if it is the current version and has a
+        trustworthy title (missing/placeholder titles indicate bad data)."""
+        raw = self.cache.read_json(video_id, "metadata")
+        if not isinstance(raw, dict):
+            return False
+        if raw.get("cache_version") != self.settings.cache_version:
+            return False
+        title = raw.get("title")
+        return bool(title) and title != "Untitled video"
+
+    def _meta_dict(self, meta: VideoMeta) -> dict[str, Any]:
+        return {**meta.model_dump(), "cache_version": self.settings.cache_version}
+
     def _has_transcript_cache(self, video_id: str) -> bool:
+        if not self._cache_current(video_id):
+            return False
         return self.cache.read_json(video_id, "transcript") is not None and bool(
             self.cache.read_json(video_id, "chunks")
         )
@@ -341,6 +359,8 @@ class VideoService:
         """Write the canonical video bundle to the authoritative store."""
         if self.store is None:
             return
+        if metadata is not None:
+            metadata = {**metadata, "cache_version": self.settings.cache_version}
         try:
             await self.store.save_video(
                 video_id,
@@ -363,6 +383,12 @@ class VideoService:
             logger.warning("[store] failed to load video=%s", video_id, exc_info=True)
             return False
         if not bundle:
+            return False
+        bundle_meta = bundle.get("metadata") or {}
+        if bundle_meta.get("cache_version") != self.settings.cache_version:
+            return False
+        title = bundle_meta.get("title")
+        if not title or title == "Untitled video":
             return False
         if bundle.get("metadata"):
             self.cache.write_json(video_id, "metadata", bundle["metadata"])
@@ -404,7 +430,7 @@ class VideoService:
         meta, transcript = result.meta, result.transcript
         if transcript.char_count > self.settings.max_transcript_chars:
             raise TranscriptTooLarge()
-        self.cache.write_json(video_id, "metadata", meta.model_dump())
+        self.cache.write_json(video_id, "metadata", self._meta_dict(meta))
         self.cache.write_json(video_id, "transcript", transcript.model_dump())
 
         stage("preparing")
@@ -575,7 +601,7 @@ class VideoService:
                 await self._persist_video(
                     video_id,
                     status="transcript_ready",
-                    metadata=meta.model_dump(),
+                    metadata=self._meta_dict(meta),
                     transcript={**transcript.model_dump(), "source": "server_ytdlp"},
                     chunks=[chunk.model_dump() for chunk in chunks],
                 )
@@ -770,7 +796,7 @@ class VideoService:
         if not chunks:
             raise TranscriptUnavailable()
 
-        self.cache.write_json(video_id, "metadata", meta.model_dump())
+        self.cache.write_json(video_id, "metadata", self._meta_dict(meta))
         self.cache.write_json(video_id, "transcript", transcript.model_dump())
         self.cache.write_json(video_id, "chunks", [chunk.model_dump() for chunk in chunks])
         source = request.method if request.method in ("browser_intercept", "caption_dom") else "client"
@@ -782,7 +808,7 @@ class VideoService:
         await self._persist_video(
             video_id,
             status="transcript_ready",
-            metadata=meta.model_dump(),
+            metadata=self._meta_dict(meta),
             transcript={**transcript.model_dump(), "source": source},
             chunks=[chunk.model_dump() for chunk in chunks],
         )

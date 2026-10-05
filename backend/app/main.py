@@ -130,6 +130,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         public = (
             path in ("/api/health",)
             or path.startswith("/api/billing/webhook")
+            or path.startswith("/api/billing/checkout")
+            or path.startswith("/api/billing/order/")
+            or path == "/api/billing/verify-public"
             or not path.startswith("/api")
         )
         if public:

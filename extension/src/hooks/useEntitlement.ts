@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { onAuthChange } from "../lib/auth";
-import { openRazorpayCheckout } from "../lib/billing";
+import { openHostedCheckout } from "../lib/billing";
 import type { AccountInfo, UsageInfo } from "../types";
 
 export interface EntitlementController {
@@ -51,25 +51,25 @@ export function useEntitlement(apiBaseUrl: string): EntitlementController {
     setError(null);
     try {
       const order = await api.createOrder(apiBaseUrl);
-      await openRazorpayCheckout(
-        order,
-        { email: account?.user?.email ?? null },
-        {
-          onSuccess: async (response) => {
-            try {
-              await api.verifyPayment(apiBaseUrl, response);
-              await refresh();
-            } catch {
-              setError("Payment received, but activation failed. Please contact support.");
-            }
-          },
-          onDismiss: () => undefined,
-        },
-      );
+      const opened = await openHostedCheckout(apiBaseUrl, order);
+      if (!opened) {
+        setError("Could not open the checkout page.");
+        return;
+      }
+      // The hosted page verifies and activates server-side; poll until it lands.
+      const deadline = Date.now() + 120_000;
+      while (Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 3_000));
+        const info = await api.me(apiBaseUrl).catch(() => null);
+        if (info) {
+          setAccount(info);
+          if (info.subscription?.active) break;
+        }
+      }
     } catch (err) {
       setError((err as Error).message || "Could not start checkout.");
     }
-  }, [account?.user?.email, apiBaseUrl, refresh]);
+  }, [apiBaseUrl]);
 
   const usage: UsageInfo = account
     ? {

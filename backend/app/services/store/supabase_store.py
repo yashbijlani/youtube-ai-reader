@@ -84,16 +84,7 @@ class SupabaseStore(Store):
                 "segments": transcript.get("segments") or [],
             }
             bundle["transcript_source"] = {"source": transcript.get("source"), "verified": False}
-        chunks = await self.client.select(
-            "video_chunks",
-            filters=[("video_id", "eq", video_id)],
-            params={"order": "idx.asc"},
-        )
-        if chunks:
-            bundle["chunks"] = [
-                {"index": row["idx"], "start": row["start_s"], "end": row["end_s"], "text": row["text"]}
-                for row in chunks
-            ]
+        # Chunks are recomputed in memory from the transcript; not persisted.
         analysis = await self._single("video_analysis", filters=[("video_id", "eq", video_id)])
         if analysis:
             bundle["analysis"] = {
@@ -154,21 +145,8 @@ class SupabaseStore(Store):
             )
 
         if chunks is not None:
-            await self.client.delete("video_chunks", filters=[("video_id", "eq", video_id)])
-            if chunks:
-                rows = [
-                    {
-                        "video_id": video_id,
-                        "idx": int(chunk.get("index", chunk.get("idx", i))),
-                        "start_s": float(chunk.get("start", chunk.get("start_s", 0))),
-                        "end_s": float(chunk.get("end", chunk.get("end_s", 0))),
-                        "text": chunk.get("text", ""),
-                    }
-                    for i, chunk in enumerate(chunks)
-                ]
-                # Batched insert keeps request bodies reasonable for long videos.
-                for start in range(0, len(rows), 500):
-                    await self.client.insert("video_chunks", rows[start : start + 500])
+            # Chunks are recomputed in memory from the transcript; not persisted.
+            pass
 
         if analysis is not None:
             await self.client.insert(

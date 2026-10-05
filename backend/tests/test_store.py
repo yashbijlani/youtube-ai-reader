@@ -92,8 +92,6 @@ async def test_supabase_store_load_video_assembles_bundle() -> None:
             return httpx.Response(200, json={"id": VIDEO, "status": "ready", "title": "T", "metadata": {"channel": "C"}})
         if "/transcripts" in url:
             return httpx.Response(200, json={"video_id": VIDEO, "language": "en", "kind": "manual", "source": "browser_intercept", "segments": [{"start": 0, "end": 1, "text": "hi"}]})
-        if "/video_chunks" in url:
-            return httpx.Response(200, json=[{"idx": 0, "start_s": 0, "end_s": 1, "text": "hi"}])
         if "/video_analysis" in url:
             return httpx.Response(200, json={"overview": "O", "key_points": [], "chapters": [], "detailed_reading": "R", "quick_read": "Q"})
         return httpx.Response(404, json=[])
@@ -104,7 +102,7 @@ async def test_supabase_store_load_video_assembles_bundle() -> None:
     assert bundle is not None
     assert bundle["metadata"]["title"] == "T"
     assert bundle["transcript"]["segments"][0]["text"] == "hi"
-    assert bundle["chunks"][0]["text"] == "hi"
+    assert "chunks" not in bundle  # chunks are recomputed, not persisted
     assert bundle["analysis"]["overview"] == "O"
     assert bundle["transcript_source"]["source"] == "browser_intercept"
     await client.aclose()
@@ -131,8 +129,7 @@ async def test_supabase_store_save_video_upserts_normalized_tables() -> None:
     paths = [p for _, p in calls]
     assert "/rest/v1/videos" in paths
     assert "/rest/v1/transcripts" in paths
-    assert "/rest/v1/video_chunks" in paths
-    assert any(m == "DELETE" for m, _ in calls)
+    assert "/rest/v1/video_chunks" not in paths  # chunks are not persisted
     await client.aclose()
 
 

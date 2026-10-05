@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  SignInCancelledError,
   authConfigured,
   getSession,
   onAuthChange,
@@ -63,7 +64,10 @@ export function useAuth(): AuthController {
       setSession(next);
       return true;
     } catch (err) {
-      setError((err as Error).message);
+      // A cancelled/dismissed flow is not an error worth surfacing.
+      if (!(err instanceof SignInCancelledError)) {
+        setError((err as Error).message);
+      }
       return false;
     }
   }, []);

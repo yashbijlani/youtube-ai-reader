@@ -106,6 +106,6 @@ describe("BrowserTranscriptProvider", () => {
     );
     expect(payload).toMatchObject({ videoId: "abc12345678", format: "json3", kind: "manual" });
     expect(payload.content).toBe(JSON3);
-    expect(payload.method).toBe("main_world_intercept");
+    expect(payload.method).toBe("browser_intercept");
   });
 });

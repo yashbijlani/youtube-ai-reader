@@ -15,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -25,6 +26,8 @@ from app.errors import Forbidden, SubscriptionRequired
 from app.services.store.base import Store
 
 logger = logging.getLogger("youtube_ai_reader.billing")
+
+_ORDER_ID_RE = re.compile(r"^order_[A-Za-z0-9]+$")
 
 
 def _hmac_hex(secret: str, message: str) -> str:
@@ -121,6 +124,62 @@ class BillingService:
             subscription_id=None,
             event="payment.verified",
         )
+
+    # -------------------------------------------------- hosted checkout support
+    async def get_order(self, order_id: str) -> dict[str, Any]:
+        """Fetch an order from Razorpay (server-side, authenticated)."""
+        if not self.settings.razorpay_configured:
+            raise SubscriptionRequired("Billing is not configured on this server yet.")
+        if not _ORDER_ID_RE.match(order_id or ""):
+            raise Forbidden("Invalid order id.")
+        client = await self._ensure_client()
+        response = await client.get(f"/orders/{order_id}")
+        if response.status_code >= 400:
+            raise Forbidden("Order not found.")
+        return response.json()
+
+    async def order_public(self, order_id: str) -> dict[str, Any]:
+        """Safe, non-secret order details for the hosted checkout page."""
+        order = await self.get_order(order_id)
+        return {
+            "order_id": order.get("id"),
+            "amount": order.get("amount"),
+            "currency": order.get("currency"),
+            "status": order.get("status"),
+            "key_id": self.settings.razorpay_key_id,
+            "plan_name": self.settings.razorpay_plan_name,
+        }
+
+    async def verify_public(
+        self, order_id: str, payment_id: str, signature: str
+    ) -> dict[str, Any]:
+        """Verify a payment reported by the hosted checkout page.
+
+        The Razorpay signature proves the payment is genuine; the user id comes
+        from the order's server-created notes, so no client-supplied identity is
+        trusted. Idempotent per payment id.
+        """
+        if not verify_payment_signature(
+            self.settings.razorpay_key_secret, order_id, payment_id, signature
+        ):
+            logger.warning("[billing] hosted payment signature rejected order=%s", order_id)
+            raise Forbidden("Payment verification failed.")
+        first_time = await self.store.mark_webhook_processed(
+            f"verify_{payment_id}", "razorpay", "payment.verified"
+        )
+        if not first_time:
+            return {"ok": True, "duplicate": True}
+        order = await self.get_order(order_id)
+        user_id = (order.get("notes") or {}).get("user_id")
+        if not user_id:
+            raise Forbidden("Order is missing a user reference.")
+        subscription = await self._activate(
+            str(user_id),
+            payment_id=payment_id,
+            subscription_id=None,
+            event="payment.verified.hosted",
+        )
+        return {"ok": True, "subscription": subscription}
 
     # -------------------------------------------------------------- webhook
     async def handle_webhook(self, raw_body: bytes, signature: str) -> dict[str, Any]:

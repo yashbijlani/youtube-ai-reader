@@ -9,8 +9,9 @@ from collections.abc import AsyncIterator
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Request
-from fastapi.responses import PlainTextResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, StreamingResponse
 
+from app.api.checkout import checkout_html
 from app.config import Settings
 from app.errors import (
     AppError,
@@ -260,6 +261,32 @@ async def billing_subscription(request: Request) -> dict:
     if not user_id:
         return {"status": "FREE", "plan": "free", "active": False}
     return await get_billing(request).decorate_status(user_id)
+
+
+@router.get("/billing/checkout", response_class=HTMLResponse)
+async def billing_checkout() -> HTMLResponse:
+    """Hosted Razorpay Checkout page (opened in a browser tab by the extension).
+
+    Public: the page only exposes non-secret order details and delegates identity
+    to the order's server-created notes at verification time.
+    """
+    return HTMLResponse(checkout_html())
+
+
+@router.get("/billing/order/{order_id}")
+async def billing_order(request: Request, order_id: str) -> dict:
+    """Public, non-secret order details for the hosted checkout page."""
+    return await get_billing(request).order_public(order_id)
+
+
+@router.post("/billing/verify-public")
+async def billing_verify_public(request: Request, payload: VerifyPaymentRequest) -> dict:
+    """Verify a payment from the hosted checkout page (signature-based)."""
+    return await get_billing(request).verify_public(
+        payload.razorpay_order_id,
+        payload.razorpay_payment_id,
+        payload.razorpay_signature,
+    )
 
 
 @router.post("/billing/webhook")

@@ -1,4 +1,6 @@
 import { BrowserTranscriptProvider, toClientPayload } from "./transcript-rnd/browser-provider";
+import { normalizeSegments, parseJson3 } from "./transcript-rnd/parseJson3";
+import { isYouTubeUrl, resolveVideoInfo } from "./lib/context";
 import type {
   BackgroundBroadcast,
   ClientTranscriptPayload,
@@ -9,70 +11,98 @@ import type {
   VideoInfo,
 } from "./types";
 
-const STORAGE_KEY = "yair.context";
 const TRANSCRIPTS_KEY = "yair.clientTranscripts";
+const PANEL_PATH = "sidepanel.html";
+const ACTION_TITLE_YT = "YouTube AI Reader";
+const ACTION_TITLE_OTHER = "Open a YouTube video to use YouTube AI Reader";
 
-interface RuntimeState {
+interface TabContext {
   video: VideoInfo | null;
   playbackSeconds: number | null;
   requestedVideoId: string | null;
-  tabId: number | null;
   updatedAt: number;
 }
 
-const state: RuntimeState = {
-  video: null,
-  playbackSeconds: null,
-  requestedVideoId: null,
-  tabId: null,
-  updatedAt: Date.now(),
-};
+/**
+ * Per-tab context. The background is shared across tabs, so keying by tab id is
+ * essential — a single global context would leak one tab's video into another
+ * panel (or a stale value across service-worker restarts).
+ */
+const tabStates: Record<number, TabContext> = {};
 
-function snapshot(): VideoContextSnapshot {
+function ensureTab(tabId: number): TabContext {
+  let ctx = tabStates[tabId];
+  if (!ctx) {
+    ctx = { video: null, playbackSeconds: null, requestedVideoId: null, updatedAt: Date.now() };
+    tabStates[tabId] = ctx;
+  }
+  return ctx;
+}
+
+async function tabUrl(tabId: number): Promise<string | null> {
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    return tab.url ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** The active tab of the panel's window, or the focused window. */
+async function activeTabId(): Promise<number | null> {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab?.id != null) return tab.id;
+    const [fallback] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    return fallback?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function snapshotForTab(
+  tabId: number | null,
+): Promise<VideoContextSnapshot & { requestedVideoId: string | null }> {
+  if (tabId == null) {
+    return { video: null, playbackSeconds: null, updatedAt: 0, requestedVideoId: null };
+  }
+  const url = await tabUrl(tabId);
+  const ctx = tabStates[tabId];
+  const video = resolveVideoInfo(ctx?.video ?? null, url);
+  if (ctx && video && ctx.video?.videoId !== video.videoId) {
+    // URL disagrees with the stored context — trust the URL.
+    ctx.video = video;
+    ctx.playbackSeconds = null;
+  }
   return {
-    video: state.video,
-    playbackSeconds: state.playbackSeconds,
-    updatedAt: state.updatedAt,
+    video,
+    playbackSeconds: ctx?.playbackSeconds ?? null,
+    updatedAt: ctx?.updatedAt ?? Date.now(),
+    requestedVideoId: ctx?.requestedVideoId ?? null,
   };
 }
 
-async function persist(): Promise<void> {
-  try {
-    await chrome.storage.session.set({ [STORAGE_KEY]: { ...state } });
-  } catch {
-    // session storage is best-effort
-  }
-}
-
-async function restore(): Promise<void> {
-  try {
-    const stored = await chrome.storage.session.get(STORAGE_KEY);
-    const value = stored[STORAGE_KEY] as RuntimeState | undefined;
-    if (value && typeof value === "object") {
-      Object.assign(state, value);
-    }
-  } catch {
-    // ignore
-  }
-}
-
-function broadcast(requestedVideoId: string | null = state.requestedVideoId): void {
-  const message: BackgroundBroadcast = {
-    type: "CONTEXT_UPDATED",
-    context: snapshot(),
-    requestedVideoId,
-  };
-  chrome.runtime.sendMessage(message).catch(() => {
-    // No side panel open; nothing to notify.
-  });
+function broadcast(tabId: number | null, requestedVideoId: string | null = null): void {
+  void (async () => {
+    const context = await snapshotForTab(tabId);
+    const message: BackgroundBroadcast = {
+      type: "CONTEXT_UPDATED",
+      tabId,
+      context: { video: context.video, playbackSeconds: context.playbackSeconds, updatedAt: context.updatedAt },
+      requestedVideoId: requestedVideoId ?? context.requestedVideoId,
+    };
+    chrome.runtime.sendMessage(message).catch(() => {
+      // No side panel open; nothing to notify.
+    });
+  })();
 }
 
 let lastPlaybackBroadcast = 0;
-function broadcastPlaybackThrottled(): void {
+function broadcastPlaybackThrottled(tabId: number | null): void {
   const now = Date.now();
   if (now - lastPlaybackBroadcast < 900) return;
   lastPlaybackBroadcast = now;
-  broadcast();
+  broadcast(tabId);
 }
 
 /**
@@ -83,10 +113,6 @@ function broadcastPlaybackThrottled(): void {
  *      response (primary; full timestamps).
  *   2. Rendered caption DOM capture (lossy, real-time).
  * Server yt-dlp remains the caller's fallback when this returns null.
- *
- * The interceptor is narrowly scoped to caption requests (see
- * `transcript-rnd/page-interceptor.ts`); it never reads cookies, auth headers,
- * request bodies, or unrelated traffic.
  */
 const browserProvider = new BrowserTranscriptProvider();
 
@@ -118,6 +144,31 @@ async function getClientTranscript(videoId: string): Promise<ClientTranscriptPay
   }
 }
 
+// Captures forwarded by the content-script bridge (independent of the
+// chrome.scripting read path). Keyed by tab; validated against the video id.
+interface PendingCapture {
+  videoId: string | null;
+  text: string;
+  at: number;
+}
+const pendingCaptures: Record<number, PendingCapture> = {};
+
+function pendingPayload(tabId: number, videoId: string): ClientTranscriptPayload | null {
+  const pending = pendingCaptures[tabId];
+  if (!pending || !pending.text) return null;
+  if (pending.videoId && pending.videoId !== videoId) return null;
+  const segments = normalizeSegments(parseJson3(pending.text));
+  if (segments.length === 0) return null;
+  return {
+    videoId,
+    language: "en",
+    kind: "auto",
+    format: "json3",
+    content: pending.text,
+    method: "browser_intercept",
+  };
+}
+
 // In-flight extractions per tab, so a pre-extraction on navigation and an
 // awaited request from the panel share one capture instead of racing.
 const extractionInflight: Record<number, Promise<TranscriptExtractionResult>> = {};
@@ -136,7 +187,7 @@ function extractAndStore(tabId: number, videoId: string): Promise<TranscriptExtr
         console.log("[yair] no browser captions found; server fallback will handle it");
         return { status: "no_captions" };
       }
-      const payload = toClientPayload(result);
+      const payload = toClientPayload(result, videoId);
       await storeClientTranscript(videoId, payload);
       return { status: "ok", payload };
     } catch (error) {
@@ -167,8 +218,8 @@ async function openPanel(tabId?: number): Promise<boolean> {
     if (tabId != null) {
       await chrome.sidePanel.open({ tabId });
     } else {
-      const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-      if (tab?.id != null) await chrome.sidePanel.open({ tabId: tab.id });
+      const id = await activeTabId();
+      if (id != null) await chrome.sidePanel.open({ tabId: id });
     }
     return true;
   } catch (error) {
@@ -177,11 +228,9 @@ async function openPanel(tabId?: number): Promise<boolean> {
   }
 }
 
-async function seekTo(seconds: number, videoId?: string): Promise<boolean> {
+async function seekTo(seconds: number, tabId?: number | null): Promise<boolean> {
   const candidates: number[] = [];
-  if (state.tabId != null && (!videoId || state.video?.videoId === videoId)) {
-    candidates.push(state.tabId);
-  }
+  if (tabId != null) candidates.push(tabId);
   try {
     const tabs = await chrome.tabs.query({
       url: ["https://www.youtube.com/*", "https://m.youtube.com/*"],
@@ -192,9 +241,9 @@ async function seekTo(seconds: number, videoId?: string): Promise<boolean> {
   } catch {
     // tabs permission is covered by host permissions; ignore failures
   }
-  for (const tabId of candidates) {
+  for (const id of candidates) {
     try {
-      const response = (await chrome.tabs.sendMessage(tabId, {
+      const response = (await chrome.tabs.sendMessage(id, {
         type: "SEEK_TO",
         seconds,
       })) as { ok?: boolean } | undefined;
@@ -206,61 +255,109 @@ async function seekTo(seconds: number, videoId?: string): Promise<boolean> {
   return false;
 }
 
+async function resolvePanelTab(requested: number | null | undefined): Promise<number | null> {
+  if (requested != null) return requested;
+  return activeTabId();
+}
+
 async function handle(
   message: ContentToBackground | PanelToBackground | { type: "PING" },
   sender: chrome.runtime.MessageSender,
-  ): Promise<unknown> {
+): Promise<unknown> {
   switch (message.type) {
     case "VIDEO_CHANGED": {
-      state.video = message.video;
-      state.tabId = sender.tab?.id ?? state.tabId;
-      state.requestedVideoId = null;
-      if (!message.video) state.playbackSeconds = null;
-      state.updatedAt = Date.now();
-      await persist();
-      broadcast(null);
-      if (message.video) {
-        scheduleExtraction(sender.tab?.id ?? state.tabId ?? undefined, message.video.videoId);
-      }
+      const tabId = sender.tab?.id;
+      if (tabId == null) return { ok: false };
+      const ctx = ensureTab(tabId);
+      ctx.video = message.video;
+      ctx.requestedVideoId = null;
+      if (!message.video) ctx.playbackSeconds = null;
+      ctx.updatedAt = Date.now();
+      broadcast(tabId, null);
+      if (message.video) scheduleExtraction(tabId, message.video.videoId);
       return { ok: true };
     }
     case "PLAYBACK_TIME": {
-      if (message.videoId === state.video?.videoId) {
-        state.playbackSeconds = message.seconds;
-        state.updatedAt = Date.now();
-        broadcastPlaybackThrottled();
+      const tabId = sender.tab?.id;
+      if (tabId == null) return { ok: true };
+      const ctx = ensureTab(tabId);
+      ctx.playbackSeconds = message.seconds;
+      ctx.updatedAt = Date.now();
+      if (ctx.video?.videoId !== message.videoId) {
+        // Reconcile a stale context using the reporting tab.
+        const url = await tabUrl(tabId);
+        const video = resolveVideoInfo(ctx.video, url);
+        ctx.video = video && video.videoId === message.videoId ? video : ctx.video;
       }
+      broadcastPlaybackThrottled(tabId);
       return { ok: true };
     }
     case "READ_WITH_AI_REQUESTED": {
-      state.video = message.video;
-      state.tabId = sender.tab?.id ?? state.tabId;
-      state.requestedVideoId = message.video.videoId;
-      state.updatedAt = Date.now();
-      scheduleExtraction(sender.tab?.id ?? state.tabId ?? undefined, message.video.videoId, 0);
-      const opened = await openPanel(sender.tab?.id);
-      await persist();
-      broadcast();
+      const tabId = sender.tab?.id;
+      if (tabId == null) return { ok: false };
+      const ctx = ensureTab(tabId);
+      ctx.video = message.video;
+      ctx.requestedVideoId = message.video.videoId;
+      ctx.updatedAt = Date.now();
+      scheduleExtraction(tabId, message.video.videoId, 0);
+      const opened = await openPanel(tabId);
+      broadcast(tabId, message.video.videoId);
       return { ok: true, opened };
     }
-    case "GET_CONTEXT":
-      return { ...snapshot(), requestedVideoId: state.requestedVideoId };
+    case "GET_CONTEXT": {
+      const tabId = await resolvePanelTab(message.tabId);
+      const snapshot = await snapshotForTab(tabId);
+      return {
+        video: snapshot.video,
+        playbackSeconds: snapshot.playbackSeconds,
+        updatedAt: snapshot.updatedAt,
+        requestedVideoId: snapshot.requestedVideoId,
+        tabId,
+      };
+    }
     case "GET_CLIENT_TRANSCRIPT":
       return getClientTranscript(message.videoId);
+    case "CAPTION_CAPTURED": {
+      const tabId = sender.tab?.id;
+      if (tabId == null || typeof message.text !== "string" || message.text.length === 0) {
+        return { ok: false };
+      }
+      pendingCaptures[tabId] = { videoId: message.videoId ?? null, text: message.text, at: Date.now() };
+      return { ok: true };
+    }
     case "EXTRACT_CLIENT_TRANSCRIPT": {
-      const tabId = sender.tab?.id ?? state.tabId ?? undefined;
+      const tabId = await resolvePanelTab(message.tabId ?? sender.tab?.id);
       const cached = await getClientTranscript(message.videoId);
       if (cached) return { status: "ok", payload: cached } satisfies TranscriptExtractionResult;
-      if (tabId == null) return { status: "error", message: "No active YouTube tab." } satisfies TranscriptExtractionResult;
-      return extractAndStore(tabId, message.videoId);
+      if (tabId == null) {
+        return { status: "error", message: "No active YouTube tab." } satisfies TranscriptExtractionResult;
+      }
+      // Fast path: the content-script bridge may already have the capture.
+      const bridged = pendingPayload(tabId, message.videoId);
+      if (bridged) {
+        await storeClientTranscript(message.videoId, bridged);
+        return { status: "ok", payload: bridged } satisfies TranscriptExtractionResult;
+      }
+      const result = await extractAndStore(tabId, message.videoId);
+      if (result.status !== "ok") {
+        // Bridge may have arrived while the scripting path was polling.
+        const late = pendingPayload(tabId, message.videoId);
+        if (late) {
+          await storeClientTranscript(message.videoId, late);
+          return { status: "ok", payload: late } satisfies TranscriptExtractionResult;
+        }
+      }
+      return result;
     }
-    case "CONSUME_REQUEST":
-      state.requestedVideoId = null;
+    case "CONSUME_REQUEST": {
+      const tabId = await resolvePanelTab(message.tabId);
+      if (tabId != null && tabStates[tabId]) tabStates[tabId].requestedVideoId = null;
       return { ok: true };
+    }
     case "SEEK_TO":
-      return { ok: await seekTo(message.seconds, message.videoId) };
+      return { ok: await seekTo(message.seconds, message.tabId) };
     case "OPEN_PANEL":
-      return { ok: await openPanel(sender.tab?.id) };
+      return { ok: await openPanel(sender.tab?.id ?? message.tabId ?? undefined) };
     case "PING":
       return { ok: true };
     default:
@@ -278,13 +375,75 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true; // keep the channel open for async responses
 });
 
+/**
+ * Enable the action only on YouTube (greyed + tooltip elsewhere). The side
+ * panel itself stays enabled on every tab so an already-open panel remains
+ * closable; the panel renders a "turned off" message off-YouTube instead.
+ */
+function configureTab(tabId: number, url: string | null | undefined): void {
+  const youtube = isYouTubeUrl(url ?? "");
+  chrome.sidePanel
+    .setOptions({ tabId, path: PANEL_PATH, enabled: true })
+    .catch(() => undefined);
+  if (youtube) {
+    chrome.action.enable(tabId).catch(() => undefined);
+    chrome.action.setTitle({ tabId, title: ACTION_TITLE_YT }).catch(() => undefined);
+  } else {
+    chrome.action.disable(tabId).catch(() => undefined);
+    chrome.action.setTitle({ tabId, title: ACTION_TITLE_OTHER }).catch(() => undefined);
+  }
+}
+
+function configureAllTabs(): void {
+  chrome.tabs
+    .query({})
+    .then((tabs) => {
+      for (const tab of tabs) if (tab.id != null) configureTab(tab.id, tab.url);
+    })
+    .catch(() => undefined);
+}
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === "complete" || changeInfo.url) {
+    configureTab(tabId, tab.url);
+  }
+});
+chrome.tabs.onActivated.addListener(({ tabId }) => {
+  chrome.tabs
+    .get(tabId)
+    .then((tab) => configureTab(tabId, tab.url))
+    .catch(() => undefined);
+});
+chrome.tabs.onRemoved.addListener((tabId) => {
+  delete tabStates[tabId];
+  delete extractionTimers[tabId];
+  delete extractionInflight[tabId];
+  delete pendingCaptures[tabId];
+});
+
 function configurePanelBehavior(): void {
   chrome.sidePanel
     .setPanelBehavior({ openPanelOnActionClick: true })
     .catch((error) => console.warn("[yair] setPanelBehavior failed", error));
 }
 
-chrome.runtime.onInstalled.addListener(configurePanelBehavior);
-chrome.runtime.onStartup.addListener(configurePanelBehavior);
+function cleanupStaleStorage(): void {
+  // Remove the old global context (from the retired single-context design) and
+  // any session-cached client transcripts, so a bad capture from an earlier
+  // bug can never be re-ingested.
+  chrome.storage.session.remove(["yair.context", TRANSCRIPTS_KEY]).catch(() => undefined);
+}
+
+chrome.runtime.onInstalled.addListener(() => {
+  configurePanelBehavior();
+  cleanupStaleStorage();
+  configureAllTabs();
+});
+chrome.runtime.onStartup.addListener(() => {
+  configurePanelBehavior();
+  cleanupStaleStorage();
+  configureAllTabs();
+});
 configurePanelBehavior();
-void restore();
+cleanupStaleStorage();
+configureAllTabs();
