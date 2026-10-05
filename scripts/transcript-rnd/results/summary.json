@@ -1,0 +1,388 @@
+{
+  "generatedAt": "2026-10-05T12:07:55.846Z",
+  "totalVideos": 60,
+  "videosWithCaptions": 42,
+  "videosWithoutCaptions": 13,
+  "categories": {
+    "A_normal_podcast": {
+      "n": 6,
+      "has_captions": 6,
+      "no_captions": 0,
+      "C_success": 6
+    },
+    "B_long_podcast": {
+      "n": 6,
+      "has_captions": 6,
+      "no_captions": 0,
+      "C_success": 6
+    },
+    "G_popular": {
+      "n": 6,
+      "has_captions": 5,
+      "no_captions": 1,
+      "C_success": 5
+    },
+    "C_auto_captions": {
+      "n": 6,
+      "has_captions": 6,
+      "no_captions": 0,
+      "C_success": 6
+    },
+    "D_manual_captions": {
+      "n": 6,
+      "has_captions": 5,
+      "no_captions": 1,
+      "C_success": 4
+    },
+    "F_multilanguage": {
+      "n": 6,
+      "has_captions": 6,
+      "no_captions": 0,
+      "C_success": 6
+    },
+    "I_shorts": {
+      "n": 6,
+      "has_captions": 5,
+      "no_captions": 1,
+      "C_success": 5
+    },
+    "J_live": {
+      "n": 6,
+      "has_captions": 0,
+      "no_captions": 6,
+      "C_success": 1
+    },
+    "H_recent": {
+      "n": 6,
+      "has_captions": 3,
+      "no_captions": 3,
+      "C_success": 4
+    },
+    "E_no_captions": {
+      "n": 6,
+      "has_captions": 0,
+      "no_captions": 1,
+      "C_success": 0
+    }
+  },
+  "methods": {
+    "Player-response fetch (Method A)": {
+      "attempted": 42,
+      "success": 0,
+      "successRate": 0,
+      "timestampedRate": null,
+      "medianLatencyMs": null,
+      "p95LatencyMs": null,
+      "avgLatencyMs": null,
+      "avgSegments": null,
+      "avgCharacters": null
+    },
+    "MAIN-world intercept (Method C)": {
+      "attempted": 42,
+      "success": 41,
+      "successRate": 97.6,
+      "timestampedRate": 100,
+      "medianLatencyMs": 5546,
+      "p95LatencyMs": 6790,
+      "avgLatencyMs": 5442,
+      "avgSegments": 924,
+      "avgCharacters": 36245
+    },
+    "Rendered caption DOM (Method D)": {
+      "attempted": 42,
+      "success": 35,
+      "successRate": 83.3,
+      "timestampedRate": 100,
+      "medianLatencyMs": 6092,
+      "p95LatencyMs": 6414,
+      "avgLatencyMs": 6132,
+      "avgSegments": 7,
+      "avgCharacters": 213
+    },
+    "Transcript panel (Method F)": {
+      "attempted": 42,
+      "success": 0,
+      "successRate": 0,
+      "timestampedRate": null,
+      "medianLatencyMs": null,
+      "p95LatencyMs": null,
+      "avgLatencyMs": null,
+      "avgSegments": null,
+      "avgCharacters": null
+    }
+  },
+  "interceptQuality": {
+    "successWithFullCoverage": 36,
+    "successWithPartialCoverage": 5,
+    "coverageOfSuccess": [
+      {
+        "video_id": null,
+        "coverage": 1
+      },
+      {
+        "video_id": null,
+        "coverage": 0.99
+      },
+      {
+        "video_id": null,
+        "coverage": 1
+      },
+      {
+        "video_id": null,
+        "coverage": 1
+      },
+      {
+        "video_id": null,
+        "coverage": 0.97
+      },
+      {
+        "video_id": null,
+        "coverage": 1
+      },
+      {
+        "video_id": null,
+        "coverage": 1
+      },
+      {
+        "video_id": null,
+        "coverage": 1
+      },
+      {
+        "video_id": null,
+        "coverage": 1
+      },
+      {
+        "video_id": null,
+        "coverage": 0.01
+      },
+      {
+        "video_id": null,
+        "coverage": 1
+      },
+      {
+        "video_id": null,
+        "coverage": 1
+      },
+      {
+        "video_id": null,
+        "coverage": 0.95
+      },
+      {
+        "video_id": null,
+        "coverage": 0.96
+      },
+      {
+        "video_id": null,
+        "coverage": 0.99
+      },
+      {
+        "video_id": null,
+        "coverage": 0.94
+      },
+      {
+        "video_id": null,
+        "coverage": 0.98
+      },
+      {
+        "video_id": null,
+        "coverage": 0.95
+      },
+      {
+        "video_id": null,
+        "coverage": 1
+      },
+      {
+        "video_id": null,
+        "coverage": 0.99
+      },
+      {
+        "video_id": null,
+        "coverage": 1
+      },
+      {
+        "video_id": null,
+        "coverage": 0.99
+      },
+      {
+        "video_id": null,
+        "coverage": 0.98
+      },
+      {
+        "video_id": null,
+        "coverage": 1
+      },
+      {
+        "video_id": null,
+        "coverage": 0.99
+      },
+      {
+        "video_id": null,
+        "coverage": 1
+      },
+      {
+        "video_id": null,
+        "coverage": 0
+      },
+      {
+        "video_id": null,
+        "coverage": 0.99
+      },
+      {
+        "video_id": null,
+        "coverage": 1
+      },
+      {
+        "video_id": null,
+        "coverage": 0.93
+      },
+      {
+        "video_id": null,
+        "coverage": 1
+      },
+      {
+        "video_id": null,
+        "coverage": 0.98
+      },
+      {
+        "video_id": null,
+        "coverage": 0.93
+      },
+      {
+        "video_id": null,
+        "coverage": 0.98
+      },
+      {
+        "video_id": null,
+        "coverage": 0.88
+      },
+      {
+        "video_id": null,
+        "coverage": 0.8
+      },
+      {
+        "video_id": null,
+        "coverage": 0.95
+      },
+      {
+        "video_id": null,
+        "coverage": 0.65
+      },
+      {
+        "video_id": null,
+        "coverage": 1.69
+      },
+      {
+        "video_id": null,
+        "coverage": 1
+      },
+      {
+        "video_id": null,
+        "coverage": 1
+      }
+    ]
+  },
+  "failures": [
+    {
+      "video_id": "ko70cExuzZM",
+      "category": "G_popular",
+      "tracks": 0,
+      "error": "no caption response captured"
+    },
+    {
+      "video_id": "J8DGjUv-Vjc",
+      "category": "D_manual_captions",
+      "tracks": 18,
+      "error": "no caption response captured"
+    },
+    {
+      "video_id": "PGUdWfB8nLg",
+      "category": "D_manual_captions",
+      "tracks": 0,
+      "error": "no caption response captured"
+    },
+    {
+      "video_id": "ZEC_pxEHNDw",
+      "category": "I_shorts",
+      "tracks": 0,
+      "error": "no caption response captured"
+    },
+    {
+      "video_id": "Xt03cJi1Nd0",
+      "category": "J_live",
+      "tracks": 0,
+      "error": "no caption response captured"
+    },
+    {
+      "video_id": "Cv30IXRsFvA",
+      "category": "J_live",
+      "tracks": 0,
+      "error": "no caption response captured"
+    },
+    {
+      "video_id": "xDWQ3LkccY8",
+      "category": "J_live",
+      "tracks": 0,
+      "error": "no caption response captured"
+    },
+    {
+      "video_id": "_sKZFIZvwP8",
+      "category": "J_live",
+      "tracks": 0,
+      "error": "no caption response captured"
+    },
+    {
+      "video_id": "sYZtOFzM78M",
+      "category": "J_live",
+      "tracks": 0,
+      "error": "no caption response captured"
+    },
+    {
+      "video_id": "cGKIIGuK8Zk",
+      "category": "H_recent",
+      "tracks": 0,
+      "error": "no caption response captured"
+    },
+    {
+      "video_id": "ab4BTPPqYGY",
+      "category": "H_recent",
+      "tracks": 0,
+      "error": "no caption response captured"
+    },
+    {
+      "video_id": "mPZkdNFkNps",
+      "category": "E_no_captions",
+      "tracks": 0,
+      "error": "Error: Attempted to use detached Frame 'FAEDBCEC4A26EAB252B5618AFCC20C60'."
+    },
+    {
+      "video_id": "q76bMs-NwRk",
+      "category": "E_no_captions",
+      "tracks": null,
+      "error": "ConnectionClosedError: Connection closed."
+    },
+    {
+      "video_id": "HWgOhngBGZo",
+      "category": "E_no_captions",
+      "tracks": null,
+      "error": "ConnectionClosedError: Connection closed."
+    },
+    {
+      "video_id": "JbJ0sYt9Nyk",
+      "category": "E_no_captions",
+      "tracks": null,
+      "error": "ConnectionClosedError: Connection closed."
+    },
+    {
+      "video_id": "XhAhviQaxpQ",
+      "category": "E_no_captions",
+      "tracks": null,
+      "error": "ConnectionClosedError: Connection closed."
+    },
+    {
+      "video_id": "gP9sGBywjks",
+      "category": "E_no_captions",
+      "tracks": null,
+      "error": "ConnectionClosedError: Connection closed."
+    }
+  ]
+}

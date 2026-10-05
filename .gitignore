@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+extension/dist/
+*.tsbuildinfo
+
+# Env / secrets
+.env
+.env.local
+!.env.example
+
+# Data / caches
+backend/data/
+*.sqlite
+*.db
+
+# Transcript R&D raw transcript dumps (regenerable; keep the small summaries)
+scripts/transcript-rnd/results/transcripts/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.log

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Transcript R&D Harness</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body { font: 14px/1.45 system-ui, sans-serif; margin: 0; padding: 20px; background: #0f1115; color: #e6e6e6; }
+      h1 { font-size: 18px; margin: 0 0 4px; }
+      .sub { color: #8a94a6; margin-bottom: 16px; }
+      .panel { border: 1px solid #262c38; border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; background: #151922; }
+      .row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+      input[type="text"] { flex: 1; padding: 8px 10px; border-radius: 8px; border: 1px solid #303747; background: #0f1115; color: inherit; }
+      button { padding: 8px 14px; border-radius: 8px; border: 0; background: #2f6fed; color: #fff; font-weight: 600; cursor: pointer; }
+      button:disabled { opacity: 0.6; cursor: default; }
+      table { width: 100%; border-collapse: collapse; }
+      td { padding: 4px 8px; vertical-align: top; border-bottom: 1px solid #1f2530; }
+      td.k { color: #8a94a6; width: 170px; white-space: nowrap; }
+      .ok { color: #3ddc84; font-weight: 700; }
+      .fail { color: #ff6b6b; font-weight: 700; }
+      pre { background: #0b0e13; border: 1px solid #232a36; border-radius: 8px; padding: 12px; overflow: auto; max-height: 320px; }
+      .muted { color: #8a94a6; }
+    </style>
+  </head>
+  <body>
+    <h1>YouTube AI Reader — Transcript R&amp;D Harness</h1>
+    <div class="sub">Runs isolated browser-side transcript extraction against the active YouTube tab.</div>
+    <div class="panel">
+      <div class="row">
+        <input id="url" type="text" placeholder="https://www.youtube.com/watch?v=… (or leave blank for the active tab)" />
+        <button id="run">Run extraction</button>
+      </div>
+      <div class="row muted" id="status">Idle.</div>
+    </div>
+    <div class="panel" id="result" hidden>
+      <table id="fields"></table>
+    </div>
+    <div class="panel">
+      <div class="row"><strong>Raw result (machine-readable)</strong></div>
+      <pre id="json">{}</pre>
+    </div>
+    <script type="module" src="./debug.ts"></script>
+  </body>
+</html>

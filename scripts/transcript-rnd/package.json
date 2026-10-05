@@ -1,0 +1,14 @@
+{
+  "name": "youtube-ai-reader-transcript-rnd",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Isolated R&D harness: measure browser-side YouTube transcript extraction vs server yt-dlp.",
+  "scripts": {
+    "probe": "node probe.mjs",
+    "run": "node run-experiments.mjs"
+  },
+  "dependencies": {
+    "puppeteer-core": "^25.12.0"
+  }
+}

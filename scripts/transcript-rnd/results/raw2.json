@@ -1,0 +1,2016 @@
+[
+  {
+    "video_id": "T9Bmk8NxGzo",
+    "category": "F_multilanguage",
+    "corpus_title": "Reading the News | Learn Spanish with Podcast | episode 15 | Easy Spanish",
+    "inspected": {
+      "title": "Reading the News | Learn Spanish with Podcast | episode 15 | Easy Spanish",
+      "duration": 632,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 12,
+      "manualCount": 11,
+      "asrCount": 1,
+      "languages": [
+        "ar",
+        "bn",
+        "zh",
+        "en",
+        "fr",
+        "de",
+        "hi",
+        "id",
+        "pt",
+        "ru",
+        "es",
+        "es-ES"
+      ],
+      "englishManual": true,
+      "englishAsr": false,
+      "captionTracklistAvailable": true
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": 185,
+        "error": "empty body (pot required)",
+        "language": "en"
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": true,
+        "latency_ms": 5874,
+        "segment_count": 93,
+        "character_count": 5142,
+        "word_count": 931,
+        "timestamped": true,
+        "first_timestamp": 0.399,
+        "last_timestamp": 626.6,
+        "error": null,
+        "via": "xhr",
+        "hasPot": true,
+        "bytes": 14369,
+        "paramKeys": [
+          "v",
+          "ei",
+          "caps",
+          "opi",
+          "exp",
+          "xoaf",
+          "xowf",
+          "xospf",
+          "hl",
+          "ip",
+          "ipbits",
+          "expire",
+          "sparams",
+          "signature",
+          "key",
+          "lang",
+          "potc",
+          "pot",
+          "fmt",
+          "xorb",
+          "xobt",
+          "xovt",
+          "cbr",
+          "cbrver",
+          "c",
+          "cver",
+          "cplayer",
+          "cos",
+          "cplatform"
+        ],
+        "retriedFreshPage": true,
+        "coverage": 0.99
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": true,
+        "latency_ms": 6414,
+        "segment_count": 4,
+        "character_count": 69,
+        "timestamped": true,
+        "error": null
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": 400,
+        "error": "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"errors\": [\n      {"
+      }
+    },
+    "timestamp": "2026-10-05T11:00:42.311Z"
+  },
+  {
+    "video_id": "-0h5G-BpgKE",
+    "category": "F_multilanguage",
+    "corpus_title": "🤯 BIG NEWS + SPANISH STORIES to practice listening – our crazy summer - Ep 423",
+    "inspected": {
+      "title": "🤯 BIG NEWS + SPANISH STORIES to practice listening – our crazy summer - Ep 423",
+      "duration": 1363,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 1,
+      "manualCount": 0,
+      "asrCount": 1,
+      "languages": [
+        "es"
+      ],
+      "englishManual": false,
+      "englishAsr": false,
+      "captionTracklistAvailable": true
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": 190,
+        "error": "empty body (pot required)",
+        "language": "es"
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": true,
+        "latency_ms": 5513,
+        "segment_count": 576,
+        "character_count": 19991,
+        "word_count": 3789,
+        "timestamped": true,
+        "first_timestamp": 0,
+        "last_timestamp": 1357.83,
+        "error": null,
+        "via": "xhr",
+        "hasPot": true,
+        "bytes": 410806,
+        "paramKeys": [
+          "v",
+          "ei",
+          "caps",
+          "opi",
+          "exp",
+          "xoaf",
+          "xowf",
+          "xospf",
+          "hl",
+          "ip",
+          "ipbits",
+          "expire",
+          "sparams",
+          "signature",
+          "key",
+          "kind",
+          "lang",
+          "potc",
+          "pot",
+          "fmt",
+          "xorb",
+          "xobt",
+          "xovt",
+          "cbr",
+          "cbrver",
+          "c",
+          "cver",
+          "cplayer",
+          "cos",
+          "cplatform"
+        ],
+        "retriedFreshPage": true,
+        "coverage": 1
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": true,
+        "latency_ms": 6054,
+        "segment_count": 9,
+        "character_count": 284,
+        "timestamped": true,
+        "error": null
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": 400,
+        "error": "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"errors\": [\n      {"
+      }
+    },
+    "timestamp": "2026-10-05T11:01:10.936Z"
+  },
+  {
+    "video_id": "IFx8eABfivg",
+    "category": "F_multilanguage",
+    "corpus_title": "¿Qué efecto tiene el café en el cuerpo? | BBC Mundo",
+    "inspected": {
+      "title": "¿Qué efecto tiene el café en el cuerpo? | BBC Mundo",
+      "duration": 376,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 1,
+      "manualCount": 1,
+      "asrCount": 0,
+      "languages": [
+        "es"
+      ],
+      "englishManual": false,
+      "englishAsr": false,
+      "captionTracklistAvailable": true
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": 383,
+        "error": "empty body (pot required)",
+        "language": "es"
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": true,
+        "latency_ms": 3442,
+        "segment_count": 63,
+        "character_count": 4689,
+        "word_count": 784,
+        "timestamped": true,
+        "first_timestamp": 0.16,
+        "last_timestamp": 351.16,
+        "error": null,
+        "via": "xhr",
+        "hasPot": true,
+        "bytes": 11175,
+        "paramKeys": [
+          "v",
+          "ei",
+          "opi",
+          "exp",
+          "xoaf",
+          "xowf",
+          "hl",
+          "ip",
+          "ipbits",
+          "expire",
+          "sparams",
+          "signature",
+          "key",
+          "lang",
+          "potc",
+          "pot",
+          "fmt",
+          "xorb",
+          "xobt",
+          "xovt",
+          "cbr",
+          "cbrver",
+          "c",
+          "cver",
+          "cplayer",
+          "cos",
+          "cplatform"
+        ],
+        "retriedFreshPage": true,
+        "coverage": 0.93
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": true,
+        "latency_ms": 6248,
+        "segment_count": 8,
+        "character_count": 299,
+        "timestamped": true,
+        "error": null
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": 400,
+        "error": "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"errors\": [\n      {"
+      }
+    },
+    "timestamp": "2026-10-05T11:01:38.214Z"
+  },
+  {
+    "video_id": "uwU9mbKtRyU",
+    "category": "F_multilanguage",
+    "corpus_title": "Luisito Comunica y el imperio que ha creado en YouTube con su estilo informal y curioso",
+    "inspected": {
+      "title": "Luisito Comunica y el imperio que ha creado en YouTube con su estilo informal y curioso",
+      "duration": 1553,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 3,
+      "manualCount": 2,
+      "asrCount": 1,
+      "languages": [
+        "es",
+        "es",
+        "es"
+      ],
+      "englishManual": false,
+      "englishAsr": false,
+      "captionTracklistAvailable": true
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": 168,
+        "error": "empty body (pot required)",
+        "language": "es"
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": true,
+        "latency_ms": 5625,
+        "segment_count": 951,
+        "character_count": 24743,
+        "word_count": 4902,
+        "timestamped": true,
+        "first_timestamp": 1.597,
+        "last_timestamp": 1550.923,
+        "error": null,
+        "via": "xhr",
+        "hasPot": true,
+        "bytes": 118369,
+        "paramKeys": [
+          "v",
+          "ei",
+          "caps",
+          "opi",
+          "exp",
+          "xoaf",
+          "xoadf",
+          "xowf",
+          "xospf",
+          "hl",
+          "ip",
+          "ipbits",
+          "expire",
+          "sparams",
+          "signature",
+          "key",
+          "lang",
+          "name",
+          "potc",
+          "pot",
+          "fmt",
+          "xorb",
+          "xobt",
+          "xovt",
+          "cbr",
+          "cbrver",
+          "c",
+          "cver",
+          "cplayer",
+          "cos",
+          "cplatform"
+        ],
+        "retriedFreshPage": true,
+        "coverage": 1
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": true,
+        "latency_ms": 6306,
+        "segment_count": 4,
+        "character_count": 79,
+        "timestamped": true,
+        "error": null
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": 400,
+        "error": "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"errors\": [\n      {"
+      }
+    },
+    "timestamp": "2026-10-05T11:02:03.121Z"
+  },
+  {
+    "video_id": "h0Hg7CmYolw",
+    "category": "F_multilanguage",
+    "corpus_title": "Spanish Slow News Podcast # 1",
+    "inspected": {
+      "title": "Spanish Slow News Podcast # 1",
+      "duration": 597,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 1,
+      "manualCount": 0,
+      "asrCount": 1,
+      "languages": [
+        "es"
+      ],
+      "englishManual": false,
+      "englishAsr": false,
+      "captionTracklistAvailable": true
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": 199,
+        "error": "empty body (pot required)",
+        "language": "es"
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": true,
+        "latency_ms": 5762,
+        "segment_count": 138,
+        "character_count": 4445,
+        "word_count": 744,
+        "timestamped": true,
+        "first_timestamp": 0.94,
+        "last_timestamp": 586.8,
+        "error": null,
+        "via": "xhr",
+        "hasPot": true,
+        "bytes": 87391,
+        "paramKeys": [
+          "v",
+          "ei",
+          "caps",
+          "opi",
+          "exp",
+          "xoaf",
+          "xowf",
+          "hl",
+          "ip",
+          "ipbits",
+          "expire",
+          "sparams",
+          "signature",
+          "key",
+          "kind",
+          "lang",
+          "potc",
+          "pot",
+          "fmt",
+          "xorb",
+          "xobt",
+          "xovt",
+          "cbr",
+          "cbrver",
+          "c",
+          "cver",
+          "cplayer",
+          "cos",
+          "cplatform"
+        ],
+        "retriedFreshPage": true,
+        "coverage": 0.98
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": false,
+        "latency_ms": 6310,
+        "segment_count": 0,
+        "character_count": 0,
+        "timestamped": false,
+        "error": "no rendered captions"
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": 400,
+        "error": "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"errors\": [\n      {"
+      }
+    },
+    "timestamp": "2026-10-05T11:02:30.780Z"
+  },
+  {
+    "video_id": "TP2t0xh6NX0",
+    "category": "F_multilanguage",
+    "corpus_title": "Bienvenidos a AMERICANA POV: el nuevo podcast de CNNE, con Rebeka Smyth",
+    "inspected": {
+      "title": "Bienvenidos a AMERICANA POV: el nuevo podcast de CNNE, con Rebeka Smyth",
+      "duration": 100,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 1,
+      "manualCount": 0,
+      "asrCount": 1,
+      "languages": [
+        "es"
+      ],
+      "englishManual": false,
+      "englishAsr": false,
+      "captionTracklistAvailable": true
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": 251,
+        "error": "empty body (pot required)",
+        "language": "es"
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": true,
+        "latency_ms": 5359,
+        "segment_count": 42,
+        "character_count": 1511,
+        "word_count": 278,
+        "timestamped": true,
+        "first_timestamp": 0.24,
+        "last_timestamp": 92.92,
+        "error": null,
+        "via": "xhr",
+        "hasPot": true,
+        "bytes": 30152,
+        "paramKeys": [
+          "v",
+          "ei",
+          "caps",
+          "opi",
+          "exp",
+          "xoaf",
+          "xowf",
+          "xospf",
+          "hl",
+          "ip",
+          "ipbits",
+          "expire",
+          "sparams",
+          "signature",
+          "key",
+          "kind",
+          "lang",
+          "potc",
+          "pot",
+          "fmt",
+          "xorb",
+          "xobt",
+          "xovt",
+          "cbr",
+          "cbrver",
+          "c",
+          "cver",
+          "cplayer",
+          "cos",
+          "cplatform"
+        ],
+        "retriedFreshPage": false,
+        "coverage": 0.93
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": true,
+        "latency_ms": 6021,
+        "segment_count": 10,
+        "character_count": 310,
+        "timestamped": true,
+        "error": null
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": 400,
+        "error": "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"errors\": [\n      {"
+      }
+    },
+    "timestamp": "2026-10-05T11:02:57.233Z"
+  },
+  {
+    "video_id": "ZigBoJEH0og",
+    "category": "I_shorts",
+    "corpus_title": "I finally have NEWS! #shorts #books #author",
+    "inspected": {
+      "title": "I finally have NEWS! #shorts #books #author",
+      "duration": 72,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 1,
+      "manualCount": 0,
+      "asrCount": 1,
+      "languages": [
+        "en"
+      ],
+      "englishManual": false,
+      "englishAsr": true,
+      "captionTracklistAvailable": true
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": 384,
+        "error": "empty body (pot required)",
+        "language": "en"
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": true,
+        "latency_ms": 3378,
+        "segment_count": 38,
+        "character_count": 1376,
+        "word_count": 283,
+        "timestamped": true,
+        "first_timestamp": 0,
+        "last_timestamp": 70.32,
+        "error": null,
+        "via": "xhr",
+        "hasPot": true,
+        "bytes": 23341,
+        "paramKeys": [
+          "v",
+          "ei",
+          "caps",
+          "opi",
+          "exp",
+          "xoaf",
+          "xowf",
+          "xospf",
+          "hl",
+          "ip",
+          "ipbits",
+          "expire",
+          "sparams",
+          "signature",
+          "key",
+          "kind",
+          "lang",
+          "variant",
+          "potc",
+          "pot",
+          "fmt",
+          "xorb",
+          "xobt",
+          "xovt",
+          "cbr",
+          "cbrver",
+          "c",
+          "cver",
+          "cplayer",
+          "cos",
+          "cplatform"
+        ],
+        "retriedFreshPage": false,
+        "coverage": 0.98
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": true,
+        "latency_ms": 6067,
+        "segment_count": 9,
+        "character_count": 306,
+        "timestamped": true,
+        "error": null
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": 400,
+        "error": "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"errors\": [\n      {"
+      }
+    },
+    "timestamp": "2026-10-05T11:03:14.494Z"
+  },
+  {
+    "video_id": "q19ewc4zGDk",
+    "category": "I_shorts",
+    "corpus_title": "Berok-Tok | Kishore Tiwari makes a big statement on Uddhav Thackeray | #shorts #viral",
+    "inspected": {
+      "title": "Berok-Tok | Uddhav Thackeray पर Kishore Tiwari ने कही बड़ी बात | #shorts #viral",
+      "duration": 22,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 3,
+      "manualCount": 0,
+      "asrCount": 3,
+      "languages": [
+        "bn",
+        "en",
+        "hi"
+      ],
+      "englishManual": false,
+      "englishAsr": true,
+      "captionTracklistAvailable": true
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": 183,
+        "error": "empty body (pot required)",
+        "language": "en"
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": true,
+        "latency_ms": 3797,
+        "segment_count": 11,
+        "character_count": 355,
+        "word_count": 72,
+        "timestamped": true,
+        "first_timestamp": 1.639,
+        "last_timestamp": 19.409,
+        "error": null,
+        "via": "xhr",
+        "hasPot": true,
+        "bytes": 7173,
+        "paramKeys": [
+          "v",
+          "ei",
+          "caps",
+          "opi",
+          "exp",
+          "xoaf",
+          "xowf",
+          "xospf",
+          "hl",
+          "ip",
+          "ipbits",
+          "expire",
+          "sparams",
+          "signature",
+          "key",
+          "kind",
+          "lang",
+          "variant",
+          "potc",
+          "pot",
+          "fmt",
+          "xorb",
+          "xobt",
+          "xovt",
+          "cbr",
+          "cbrver",
+          "c",
+          "cver",
+          "cplayer",
+          "cos",
+          "cplatform"
+        ],
+        "retriedFreshPage": false,
+        "coverage": 0.88
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": true,
+        "latency_ms": 6049,
+        "segment_count": 5,
+        "character_count": 132,
+        "timestamped": true,
+        "error": null
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": 400,
+        "error": "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"errors\": [\n      {"
+      }
+    },
+    "timestamp": "2026-10-05T11:03:29.575Z"
+  },
+  {
+    "video_id": "ZEC_pxEHNDw",
+    "category": "I_shorts",
+    "corpus_title": "Allah Tala ke madad 😭 #ytshorts #news #prayer #today #trending #emotional #shorts",
+    "inspected": {
+      "title": "Allah Tala ke madad 😭 #ytshorts #news #prayer #today #trending #emotional #shorts",
+      "duration": 30,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 0,
+      "manualCount": 0,
+      "asrCount": 0,
+      "languages": [],
+      "englishManual": false,
+      "englishAsr": false,
+      "captionTracklistAvailable": false
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": null,
+        "error": "no-baseUrl",
+        "language": null
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": false,
+        "latency_ms": 37120,
+        "error": "no caption response captured",
+        "retriedFreshPage": true
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": false,
+        "latency_ms": 6021,
+        "segment_count": 0,
+        "character_count": 0,
+        "timestamped": false,
+        "error": "no rendered captions"
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": null,
+        "error": "no getTranscriptEndpoint params"
+      }
+    },
+    "timestamp": "2026-10-05T11:03:44.636Z"
+  },
+  {
+    "video_id": "FaiBzrotd4c",
+    "category": "I_shorts",
+    "corpus_title": "Viral News: 'Bulldozers are used after checking Muslim names' #shorts #vijaythalapathy",
+    "inspected": {
+      "title": "Viral News: 'मुसलमानों का नाम देखकर बुलडोजर चलता है' #shorts #vijaythalapathy",
+      "duration": 6,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 3,
+      "manualCount": 0,
+      "asrCount": 3,
+      "languages": [
+        "bn",
+        "en-US",
+        "hi"
+      ],
+      "englishManual": false,
+      "englishAsr": true,
+      "captionTracklistAvailable": true
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": 195,
+        "error": "empty body (pot required)",
+        "language": "en-US"
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": true,
+        "latency_ms": 3839,
+        "segment_count": 3,
+        "character_count": 80,
+        "word_count": 15,
+        "timestamped": true,
+        "first_timestamp": 0.619,
+        "last_timestamp": 4.808,
+        "error": null,
+        "via": "xhr",
+        "hasPot": true,
+        "bytes": 1798,
+        "paramKeys": [
+          "v",
+          "ei",
+          "caps",
+          "opi",
+          "exp",
+          "xoaf",
+          "xowf",
+          "xospf",
+          "hl",
+          "ip",
+          "ipbits",
+          "expire",
+          "sparams",
+          "signature",
+          "key",
+          "kind",
+          "lang",
+          "variant",
+          "potc",
+          "pot",
+          "fmt",
+          "xorb",
+          "xobt",
+          "xovt",
+          "cbr",
+          "cbrver",
+          "c",
+          "cver",
+          "cplayer",
+          "cos",
+          "cplatform"
+        ],
+        "retriedFreshPage": false,
+        "coverage": 0.8
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": true,
+        "latency_ms": 6047,
+        "segment_count": 1,
+        "character_count": 6,
+        "timestamped": true,
+        "error": null
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": 400,
+        "error": "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"errors\": [\n      {"
+      }
+    },
+    "timestamp": "2026-10-05T11:05:15.357Z"
+  },
+  {
+    "video_id": "rLmkMJnm88Q",
+    "category": "I_shorts",
+    "corpus_title": "Top English News Headlines At 5 PM | India Today | May 01, 2022 | #shorts",
+    "inspected": {
+      "title": "Top English News Headlines At 5 PM | India Today | May 01, 2022 | #shorts",
+      "duration": 52,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 1,
+      "manualCount": 0,
+      "asrCount": 1,
+      "languages": [
+        "en"
+      ],
+      "englishManual": false,
+      "englishAsr": true,
+      "captionTracklistAvailable": true
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": 254,
+        "error": "empty body (pot required)",
+        "language": "en"
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": true,
+        "latency_ms": 4665,
+        "segment_count": 16,
+        "character_count": 536,
+        "word_count": 92,
+        "timestamped": true,
+        "first_timestamp": 0.799,
+        "last_timestamp": 49.2,
+        "error": null,
+        "via": "xhr",
+        "hasPot": true,
+        "bytes": 10765,
+        "paramKeys": [
+          "v",
+          "ei",
+          "caps",
+          "opi",
+          "exp",
+          "xoaf",
+          "xowf",
+          "hl",
+          "ip",
+          "ipbits",
+          "expire",
+          "sparams",
+          "signature",
+          "key",
+          "kind",
+          "lang",
+          "potc",
+          "pot",
+          "fmt",
+          "xorb",
+          "xobt",
+          "xovt",
+          "cbr",
+          "cbrver",
+          "c",
+          "cver",
+          "cplayer",
+          "cos",
+          "cplatform"
+        ],
+        "retriedFreshPage": false,
+        "coverage": 0.95
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": true,
+        "latency_ms": 6020,
+        "segment_count": 8,
+        "character_count": 245,
+        "timestamped": true,
+        "error": null
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": 400,
+        "error": "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"errors\": [\n      {"
+      }
+    },
+    "timestamp": "2026-10-05T11:05:30.952Z"
+  },
+  {
+    "video_id": "exKxNw49l78",
+    "category": "I_shorts",
+    "corpus_title": "कप्तान स्मित मच्छर पर हम सभी को गर्व है #shorts #captansmitmachhar #news #trendingshorts",
+    "inspected": {
+      "title": "कप्तान स्मित मच्छर पर हम सभी को गर्व है #shorts #captansmitmachhar #news #trendingshorts",
+      "duration": 5,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 1,
+      "manualCount": 0,
+      "asrCount": 1,
+      "languages": [
+        "pt"
+      ],
+      "englishManual": false,
+      "englishAsr": false,
+      "captionTracklistAvailable": true
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": 200,
+        "error": "empty body (pot required)",
+        "language": "pt"
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": true,
+        "latency_ms": 3539,
+        "segment_count": 2,
+        "character_count": 49,
+        "word_count": 9,
+        "timestamped": true,
+        "first_timestamp": 0.16,
+        "last_timestamp": 3.274,
+        "error": null,
+        "via": "xhr",
+        "hasPot": true,
+        "bytes": 1343,
+        "paramKeys": [
+          "v",
+          "ei",
+          "caps",
+          "opi",
+          "exp",
+          "xoaf",
+          "xowf",
+          "xospf",
+          "hl",
+          "ip",
+          "ipbits",
+          "expire",
+          "sparams",
+          "signature",
+          "key",
+          "kind",
+          "lang",
+          "potc",
+          "pot",
+          "fmt",
+          "xorb",
+          "xobt",
+          "xovt",
+          "cbr",
+          "cbrver",
+          "c",
+          "cver",
+          "cplayer",
+          "cos",
+          "cplatform"
+        ],
+        "retriedFreshPage": false,
+        "coverage": 0.65
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": false,
+        "latency_ms": 6074,
+        "segment_count": 0,
+        "character_count": 0,
+        "timestamped": false,
+        "error": "no rendered captions"
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": 400,
+        "error": "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"errors\": [\n      {"
+      }
+    },
+    "timestamp": "2026-10-05T11:05:47.104Z"
+  },
+  {
+    "video_id": "Xt03cJi1Nd0",
+    "category": "J_live",
+    "corpus_title": "LIVE: Impeachment Trial of VP Sara Duterte | ABS-CBN News Special Coverage - DAY 33 (Oct. 5, 2026)",
+    "inspected": {
+      "title": "LIVE: Impeachment Trial of VP Sara Duterte | ABS-CBN News Special Coverage - DAY 33 (Oct. 5, 2026)",
+      "duration": 0,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 0,
+      "manualCount": 0,
+      "asrCount": 0,
+      "languages": [],
+      "englishManual": false,
+      "englishAsr": false,
+      "captionTracklistAvailable": false
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": null,
+        "error": "no-baseUrl",
+        "language": null
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": false,
+        "latency_ms": 37072,
+        "error": "no caption response captured",
+        "retriedFreshPage": true
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": false,
+        "latency_ms": 6021,
+        "segment_count": 0,
+        "character_count": 0,
+        "timestamped": false,
+        "error": "no rendered captions"
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": null,
+        "error": "no getTranscriptEndpoint params"
+      }
+    },
+    "timestamp": "2026-10-05T11:06:01.449Z"
+  },
+  {
+    "video_id": "Cv30IXRsFvA",
+    "category": "J_live",
+    "corpus_title": "LIVE - Impeachment Trial of VP Sara Duterte - DAY 33 (Oct. 5, 2026) | GMA News Special Coverage",
+    "inspected": {
+      "title": "LIVE - Impeachment Trial of VP Sara Duterte - DAY 33 (Oct. 5, 2026) | GMA News Special Coverage",
+      "duration": 0,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 0,
+      "manualCount": 0,
+      "asrCount": 0,
+      "languages": [],
+      "englishManual": false,
+      "englishAsr": false,
+      "captionTracklistAvailable": false
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": null,
+        "error": "no-baseUrl",
+        "language": null
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": false,
+        "latency_ms": 37086,
+        "error": "no caption response captured",
+        "retriedFreshPage": true
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": false,
+        "latency_ms": 6040,
+        "segment_count": 0,
+        "character_count": 0,
+        "timestamped": false,
+        "error": "no rendered captions"
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": null,
+        "error": "no getTranscriptEndpoint params"
+      }
+    },
+    "timestamp": "2026-10-05T11:07:33.311Z"
+  },
+  {
+    "video_id": "xDWQ3LkccY8",
+    "category": "J_live",
+    "corpus_title": "Watch Sky News",
+    "inspected": {
+      "title": "Watch Sky News",
+      "duration": 0,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 0,
+      "manualCount": 0,
+      "asrCount": 0,
+      "languages": [],
+      "englishManual": false,
+      "englishAsr": false,
+      "captionTracklistAvailable": false
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": null,
+        "error": "no-baseUrl",
+        "language": null
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": false,
+        "latency_ms": 37075,
+        "error": "no caption response captured",
+        "retriedFreshPage": true
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": false,
+        "latency_ms": 6026,
+        "segment_count": 0,
+        "character_count": 0,
+        "timestamped": false,
+        "error": "no rendered captions"
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": null,
+        "error": "no getTranscriptEndpoint params"
+      }
+    },
+    "timestamp": "2026-10-05T11:09:04.083Z"
+  },
+  {
+    "video_id": "p1x1ySWhdrc",
+    "category": "J_live",
+    "corpus_title": "Chiefs vs. Raiders Week 4 LIVE Stream | Chiefs Reactions, News, Analysis & MORE!",
+    "inspected": {
+      "title": null,
+      "duration": null,
+      "playability": "UNPLAYABLE",
+      "playabilityReason": null,
+      "trackCount": 0,
+      "manualCount": 0,
+      "asrCount": 0,
+      "languages": [],
+      "englishManual": false,
+      "englishAsr": false,
+      "captionTracklistAvailable": false
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": null,
+        "error": "no-baseUrl",
+        "language": null
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": true,
+        "latency_ms": 6098,
+        "segment_count": 4771,
+        "character_count": 130198,
+        "word_count": 27061,
+        "timestamped": true,
+        "first_timestamp": 17.44,
+        "last_timestamp": 11958.239,
+        "error": null,
+        "via": "xhr",
+        "hasPot": true,
+        "bytes": 2952702,
+        "paramKeys": [
+          "v",
+          "ei",
+          "caps",
+          "opi",
+          "exp",
+          "xoaf",
+          "xowf",
+          "xospf",
+          "hl",
+          "ip",
+          "ipbits",
+          "expire",
+          "sparams",
+          "signature",
+          "key",
+          "kind",
+          "lang",
+          "potc",
+          "pot",
+          "fmt",
+          "xorb",
+          "xobt",
+          "xovt",
+          "cbr",
+          "cbrver",
+          "c",
+          "cver",
+          "cplayer",
+          "cos",
+          "cplatform"
+        ],
+        "retriedFreshPage": true
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": false,
+        "latency_ms": 6130,
+        "segment_count": 0,
+        "character_count": 0,
+        "timestamped": false,
+        "error": "no rendered captions"
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": 400,
+        "error": "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"errors\": [\n      {"
+      }
+    },
+    "timestamp": "2026-10-05T11:10:35.704Z"
+  },
+  {
+    "video_id": "_sKZFIZvwP8",
+    "category": "J_live",
+    "corpus_title": "LIVE: NBC News NOW",
+    "inspected": {
+      "title": "LIVE: NBC News NOW",
+      "duration": 219617,
+      "playability": "UNPLAYABLE",
+      "playabilityReason": "This live stream recording is not available.",
+      "trackCount": 0,
+      "manualCount": 0,
+      "asrCount": 0,
+      "languages": [],
+      "englishManual": false,
+      "englishAsr": false,
+      "captionTracklistAvailable": false
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": null,
+        "error": "no-baseUrl",
+        "language": null
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": false,
+        "latency_ms": 37090,
+        "error": "no caption response captured",
+        "retriedFreshPage": true
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": false,
+        "latency_ms": 6020,
+        "segment_count": 0,
+        "character_count": 0,
+        "timestamped": false,
+        "error": "no rendered captions"
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": null,
+        "error": "no getTranscriptEndpoint params"
+      }
+    },
+    "timestamp": "2026-10-05T11:11:54.335Z"
+  },
+  {
+    "video_id": "sYZtOFzM78M",
+    "category": "J_live",
+    "corpus_title": "India Today TV LIVE: SC Issues Notice To EC | Gyanesh Kumar | Jantar Mantar Protest | Iran War",
+    "inspected": {
+      "title": null,
+      "duration": null,
+      "playability": "UNPLAYABLE",
+      "playabilityReason": null,
+      "trackCount": 0,
+      "manualCount": 0,
+      "asrCount": 0,
+      "languages": [],
+      "englishManual": false,
+      "englishAsr": false,
+      "captionTracklistAvailable": false
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": null,
+        "error": "no-baseUrl",
+        "language": null
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": false,
+        "latency_ms": 37045,
+        "error": "no caption response captured",
+        "retriedFreshPage": true
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": false,
+        "latency_ms": 6017,
+        "segment_count": 0,
+        "character_count": 0,
+        "timestamped": false,
+        "error": "no rendered captions"
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": null,
+        "error": "no getTranscriptEndpoint params"
+      }
+    },
+    "timestamp": "2026-10-05T11:13:27.017Z"
+  },
+  {
+    "video_id": "jx-w8M-hW20",
+    "category": "H_recent",
+    "corpus_title": "Today's Morning Top News Headlines | 4 Oct 2026 | CEC | Rahul | CJP | INDIA | Jantar Mantar",
+    "inspected": {
+      "title": "Today's Morning Top News Headlines | 4 Oct 2026 | CEC | Rahul | CJP | INDIA | Jantar Mantar",
+      "duration": 66,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 1,
+      "manualCount": 0,
+      "asrCount": 1,
+      "languages": [
+        "en"
+      ],
+      "englishManual": false,
+      "englishAsr": true,
+      "captionTracklistAvailable": true
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": 161,
+        "error": "empty body (pot required)",
+        "language": "en"
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": true,
+        "latency_ms": 6640,
+        "segment_count": 52,
+        "character_count": 1662,
+        "word_count": 321,
+        "timestamped": true,
+        "first_timestamp": 0.72,
+        "last_timestamp": 111.64,
+        "error": null,
+        "via": "xhr",
+        "hasPot": true,
+        "bytes": 28201,
+        "paramKeys": [
+          "v",
+          "ei",
+          "caps",
+          "opi",
+          "exp",
+          "xoaf",
+          "xowf",
+          "xospf",
+          "hl",
+          "ip",
+          "ipbits",
+          "expire",
+          "sparams",
+          "signature",
+          "key",
+          "kind",
+          "lang",
+          "variant",
+          "potc",
+          "pot",
+          "fmt",
+          "xorb",
+          "xobt",
+          "xovt",
+          "cbr",
+          "cbrver",
+          "c",
+          "cver",
+          "cplayer",
+          "cos",
+          "cplatform"
+        ],
+        "retriedFreshPage": false,
+        "coverage": 1.69
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": true,
+        "latency_ms": 6018,
+        "segment_count": 9,
+        "character_count": 250,
+        "timestamped": true,
+        "error": null
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": 400,
+        "error": "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"errors\": [\n      {"
+      }
+    },
+    "timestamp": "2026-10-05T11:15:30.005Z"
+  },
+  {
+    "video_id": "7w9TEHJxJoM",
+    "category": "H_recent",
+    "corpus_title": "LIVE: SIR Row Escalates | Opposition Protests In Mumbai & Delhi | Gyanesh Kumar Resignation Demand",
+    "inspected": {
+      "title": "LIVE: SIR Row Escalates | Opposition Protests In Mumbai & Delhi | Gyanesh Kumar Resignation Demand",
+      "duration": 9860,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 1,
+      "manualCount": 0,
+      "asrCount": 1,
+      "languages": [
+        "hi"
+      ],
+      "englishManual": false,
+      "englishAsr": false,
+      "captionTracklistAvailable": true
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": 189,
+        "error": "empty body (pot required)",
+        "language": "hi"
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": true,
+        "latency_ms": 6452,
+        "segment_count": 3526,
+        "character_count": 119026,
+        "word_count": 24238,
+        "timestamped": true,
+        "first_timestamp": 0.16,
+        "last_timestamp": 9856.96,
+        "error": null,
+        "via": "xhr",
+        "hasPot": true,
+        "bytes": 2580701,
+        "paramKeys": [
+          "v",
+          "ei",
+          "caps",
+          "opi",
+          "exp",
+          "xoaf",
+          "xowf",
+          "xospf",
+          "hl",
+          "ip",
+          "ipbits",
+          "expire",
+          "sparams",
+          "signature",
+          "key",
+          "kind",
+          "lang",
+          "potc",
+          "pot",
+          "fmt",
+          "xorb",
+          "xobt",
+          "xovt",
+          "cbr",
+          "cbrver",
+          "c",
+          "cver",
+          "cplayer",
+          "cos",
+          "cplatform"
+        ],
+        "retriedFreshPage": true,
+        "coverage": 1
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": true,
+        "latency_ms": 6022,
+        "segment_count": 8,
+        "character_count": 244,
+        "timestamped": true,
+        "error": null
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": 400,
+        "error": "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"errors\": [\n      {"
+      }
+    },
+    "timestamp": "2026-10-05T11:15:48.288Z"
+  },
+  {
+    "video_id": "Ap3jy1Wrs2o",
+    "category": "H_recent",
+    "corpus_title": "Today Breaking News ! आज 05 अक्टूबर 2026 के मुख्य समाचार बड़ी खबरें, PM Modi, UP, Bihar, Delhi, SBI",
+    "inspected": {
+      "title": "Today Breaking News ! आज 05 अक्टूबर 2026 के मुख्य समाचार बड़ी खबरें, PM Modi, UP, Bihar, Delhi, SBI",
+      "duration": 1936,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 1,
+      "manualCount": 0,
+      "asrCount": 1,
+      "languages": [
+        "hi"
+      ],
+      "englishManual": false,
+      "englishAsr": false,
+      "captionTracklistAvailable": true
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": 158,
+        "error": "empty body (pot required)",
+        "language": "hi"
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": true,
+        "latency_ms": 4856,
+        "segment_count": 969,
+        "character_count": 36253,
+        "word_count": 7486,
+        "timestamped": true,
+        "first_timestamp": 0.64,
+        "last_timestamp": 1933.582,
+        "error": null,
+        "via": "xhr",
+        "hasPot": true,
+        "bytes": 768978,
+        "paramKeys": [
+          "v",
+          "ei",
+          "caps",
+          "opi",
+          "exp",
+          "xoaf",
+          "xowf",
+          "xospf",
+          "hl",
+          "ip",
+          "ipbits",
+          "expire",
+          "sparams",
+          "signature",
+          "key",
+          "kind",
+          "lang",
+          "potc",
+          "pot",
+          "fmt",
+          "xorb",
+          "xobt",
+          "xovt",
+          "cbr",
+          "cbrver",
+          "c",
+          "cver",
+          "cplayer",
+          "cos",
+          "cplatform"
+        ],
+        "retriedFreshPage": true,
+        "coverage": 1
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": true,
+        "latency_ms": 6157,
+        "segment_count": 8,
+        "character_count": 263,
+        "timestamped": true,
+        "error": null
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": 400,
+        "error": "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"errors\": [\n      {"
+      }
+    },
+    "timestamp": "2026-10-05T11:16:17.989Z"
+  },
+  {
+    "video_id": "cGKIIGuK8Zk",
+    "category": "H_recent",
+    "corpus_title": "SC On Gyanesh Kumar Suspension LIVE: SC Big Order on Gyanesh Kumar Suspension In SIR Row | CEC | SC",
+    "inspected": {
+      "title": "SC On Gyanesh Kumar Suspension LIVE: SC Big Order on Gyanesh Kumar Suspension In SIR Row | CEC | SC",
+      "duration": 0,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 0,
+      "manualCount": 0,
+      "asrCount": 0,
+      "languages": [],
+      "englishManual": false,
+      "englishAsr": false,
+      "captionTracklistAvailable": false
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": null,
+        "error": "no-baseUrl",
+        "language": null
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": false,
+        "latency_ms": 37093,
+        "error": "no caption response captured",
+        "retriedFreshPage": true
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": false,
+        "latency_ms": 6021,
+        "segment_count": 0,
+        "character_count": 0,
+        "timestamped": false,
+        "error": "no rendered captions"
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": null,
+        "error": "no getTranscriptEndpoint params"
+      }
+    },
+    "timestamp": "2026-10-05T11:16:43.994Z"
+  },
+  {
+    "video_id": "ab4BTPPqYGY",
+    "category": "H_recent",
+    "corpus_title": "Today's Breaking News LIVE: Gyanesh Kumar | PM Modi | Rahul Gandhi | Gandhi Jayanti | EC Row | CJP",
+    "inspected": {
+      "title": "Today's Breaking News LIVE: Gyanesh Kumar | PM Modi | Rahul Gandhi | Gandhi Jayanti | EC Row | CJP",
+      "duration": 0,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 0,
+      "manualCount": 0,
+      "asrCount": 0,
+      "languages": [],
+      "englishManual": false,
+      "englishAsr": false,
+      "captionTracklistAvailable": false
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": null,
+        "error": "no-baseUrl",
+        "language": null
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": false,
+        "latency_ms": 37062,
+        "error": "no caption response captured",
+        "retriedFreshPage": true
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": false,
+        "latency_ms": 6018,
+        "segment_count": 0,
+        "character_count": 0,
+        "timestamped": false,
+        "error": "no rendered captions"
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": null,
+        "error": "no getTranscriptEndpoint params"
+      }
+    },
+    "timestamp": "2026-10-05T11:18:12.484Z"
+  },
+  {
+    "video_id": "tytTLmEOf8U",
+    "category": "H_recent",
+    "corpus_title": "LIVE: Jantar Manatar 2.0 Protest Day 3 | 15 Police Officers Injured, Over 100 Protesters Detained",
+    "inspected": {
+      "title": "LIVE: Jantar Manatar 2.0 Protest Day 3 | 15 Police Officers Injured, Over 100 Protesters Detained",
+      "duration": 36365,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 0,
+      "manualCount": 0,
+      "asrCount": 0,
+      "languages": [],
+      "englishManual": false,
+      "englishAsr": false,
+      "captionTracklistAvailable": false
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": null,
+        "error": "no-baseUrl",
+        "language": null
+      },
+      "main_world_intercept": {
+        "method": "main_world_intercept",
+        "success": true,
+        "latency_ms": 3419,
+        "segment_count": 2,
+        "character_count": 15,
+        "word_count": 3,
+        "timestamped": true,
+        "first_timestamp": 3.929,
+        "last_timestamp": 4.84,
+        "error": null,
+        "via": "xhr",
+        "hasPot": true,
+        "bytes": 818,
+        "paramKeys": [
+          "v",
+          "ei",
+          "caps",
+          "opi",
+          "exp",
+          "xoaf",
+          "xowf",
+          "xospf",
+          "hl",
+          "ip",
+          "ipbits",
+          "expire",
+          "sparams",
+          "signature",
+          "key",
+          "kind",
+          "lang",
+          "variant",
+          "potc",
+          "pot",
+          "fmt",
+          "xorb",
+          "xobt",
+          "xovt",
+          "cbr",
+          "cbrver",
+          "c",
+          "cver",
+          "cplayer",
+          "cos",
+          "cplatform"
+        ],
+        "retriedFreshPage": true,
+        "coverage": 0
+      },
+      "caption_dom": {
+        "method": "caption_dom",
+        "success": false,
+        "latency_ms": 6020,
+        "segment_count": 0,
+        "character_count": 0,
+        "timestamped": false,
+        "error": "no rendered captions"
+      },
+      "transcript_panel": {
+        "method": "transcript_panel",
+        "success": false,
+        "segment_count": 0,
+        "status": null,
+        "error": "no getTranscriptEndpoint params"
+      }
+    },
+    "timestamp": "2026-10-05T11:19:59.728Z"
+  },
+  {
+    "video_id": "mPZkdNFkNps",
+    "category": "E_no_captions",
+    "corpus_title": "Rain Sound On Window with Thunder SoundsㅣHeavy Rain for Sleep, Study and Relaxation, Meditation",
+    "inspected": {
+      "title": "Rain Sound On Window with Thunder SoundsㅣHeavy Rain for Sleep, Study and Relaxation, Meditation",
+      "duration": 28814,
+      "playability": "OK",
+      "playabilityReason": null,
+      "trackCount": 0,
+      "manualCount": 0,
+      "asrCount": 0,
+      "languages": [],
+      "englishManual": false,
+      "englishAsr": false,
+      "captionTracklistAvailable": false
+    },
+    "methods": {
+      "player_response_fetch": {
+        "method": "player_response_fetch",
+        "success": false,
+        "latency_ms": null,
+        "error": "no-baseUrl",
+        "language": null
+      }
+    },
+    "timestamp": "2026-10-05T11:20:57.141Z",
+    "fatal": "Error: Attempted to use detached Frame 'FAEDBCEC4A26EAB252B5618AFCC20C60'."
+  },
+  {
+    "video_id": "q76bMs-NwRk",
+    "category": "E_no_captions",
+    "corpus_title": "3 Hours of Gentle Night Rain, Rain Sounds for Sleeping - Dark Screen to Beat insomnia, Relax, Study",
+    "inspected": null,
+    "methods": {},
+    "timestamp": "2026-10-05T11:21:10.668Z",
+    "fatal": "ConnectionClosedError: Connection closed."
+  },
+  {
+    "video_id": "HWgOhngBGZo",
+    "category": "E_no_captions",
+    "corpus_title": "Soft Rain On Forest Cabin | No Ads | Soothing Rain Sounds For Sleeping, RDR2",
+    "inspected": null,
+    "methods": {},
+    "timestamp": "2026-10-05T11:21:10.677Z",
+    "fatal": "ConnectionClosedError: Connection closed."
+  },
+  {
+    "video_id": "JbJ0sYt9Nyk",
+    "category": "E_no_captions",
+    "corpus_title": "10 Hour | Spiritual Rain Meditation | Insomnia | Study | Focus | Spa | Calming Background Ambience",
+    "inspected": null,
+    "methods": {},
+    "timestamp": "2026-10-05T11:21:10.680Z",
+    "fatal": "ConnectionClosedError: Connection closed."
+  },
+  {
+    "video_id": "XhAhviQaxpQ",
+    "category": "E_no_captions",
+    "corpus_title": "Rain Sounds for Sleep - Open Window Rain Sounds - Heavy Rain Sounds - 1 hour",
+    "inspected": null,
+    "methods": {},
+    "timestamp": "2026-10-05T11:21:10.682Z",
+    "fatal": "ConnectionClosedError: Connection closed."
+  },
+  {
+    "video_id": "gP9sGBywjks",
+    "category": "E_no_captions",
+    "corpus_title": "Powerful night thunderstorm - Heavy Rain and Thunder - Rain Sounds for sleep - 1 hour Windy Rain",
+    "inspected": null,
+    "methods": {},
+    "timestamp": "2026-10-05T11:21:10.684Z",
+    "fatal": "ConnectionClosedError: Connection closed."
+  }
+]
