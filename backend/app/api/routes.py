@@ -14,6 +14,7 @@ from fastapi.responses import PlainTextResponse, StreamingResponse
 from app.config import Settings
 from app.errors import (
     AppError,
+    Forbidden,
     FreeLimitReached,
     InvalidYouTubeUrl,
     ProcessingInProgress,
@@ -22,7 +23,6 @@ from app.errors import (
 )
 from app.models.schemas import (
     ChatRequest,
-    EntitlementRequest,
     HealthResponse,
     IngestRequest,
     ProcessRequest,
@@ -288,16 +288,6 @@ async def usage_status(request: Request) -> dict:
     return get_usage(request).status(install_id(request))
 
 
-@router.post("/entitlement")
-async def set_entitlement(request: Request, payload: EntitlementRequest) -> dict:
-    store = get_usage(request)
-    iid = install_id(request)
-    if not UsageStore.valid_install_id(iid):
-        raise InvalidYouTubeUrl("Missing or invalid install id.")
-    store.set_paid(iid or "", payload.paid, payload.email)
-    return store.status(iid)
-
-
 @router.get("/videos/{video_id}", response_model=VideoState)
 async def get_video(request: Request, video_id: str) -> VideoState:
     service = get_service(request)
@@ -309,6 +299,8 @@ async def ingest_transcript(request: Request, video_id: str, payload: IngestRequ
     """Accept a transcript captured client-side (the user's own YouTube session)."""
     settings = get_settings(request)
     validate_video_id(video_id)
+    if not settings.trust_client_transcripts:
+        raise Forbidden("This server does not accept client-supplied transcripts.")
     await enforce_rate(request, "process", settings.rate_limit_process_per_hour, 3600)
     await enforce_video_quota(request, video_id)
     service = get_service(request)

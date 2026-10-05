@@ -82,6 +82,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         type(store).__name__,
         settings.cache_dir if settings.cache_enabled else "disabled",
     )
+    if settings.is_production:
+        if not settings.auth_required:
+            logger.warning("[startup] SECURITY: AUTH_REQUIRED is false in production")
+        if not settings.supabase_configured:
+            logger.warning("[startup] SECURITY: Supabase is not configured in production (state is in-memory)")
+        if settings.storage_backend == "filesystem":
+            logger.warning("[startup] SECURITY: STORAGE_BACKEND=filesystem in production")
     try:
         yield
     finally:
@@ -150,6 +157,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             request.state.user_email = user.email
             await _ensure_user_best_effort(app, user.id, user.email, request.headers.get("x-install-id"))
         return await call_next(request)
+
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("Referrer-Policy", "no-referrer")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        return response
 
     @app.middleware("http")
     async def access_log_and_general_limit(request: Request, call_next):

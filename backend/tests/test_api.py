@@ -325,15 +325,12 @@ def test_free_limit_counts_repeat_once(client: TestClient) -> None:
     assert _process(client, FREE_IDS[1]) == 200
 
 
-def test_entitlement_bypasses_free_limit(client: TestClient) -> None:
-    for video_id in FREE_IDS[:3]:
-        assert _process(client, video_id) == 200
+def test_client_cannot_grant_itself_entitlement(client: TestClient) -> None:
+    """The legacy client-gated entitlement route has been removed."""
     response = client.post(
         "/api/entitlement", json={"paid": True, "email": "user@example.com"}, headers=INSTALL_HEADER
     )
-    assert response.status_code == 200
-    assert response.json()["paid"] is True
-    assert _process(client, FREE_IDS[3]) == 200
+    assert response.status_code in (404, 405)
 
 
 def test_usage_endpoint(client: TestClient) -> None:
@@ -350,9 +347,9 @@ def test_no_install_id_is_unrestricted(client: TestClient) -> None:
         assert _process(client, video_id, headers={}) == 200
 
 
-def test_entitlement_requires_install_id(client: TestClient) -> None:
+def test_entitlement_route_is_not_reachable(client: TestClient) -> None:
     response = client.post("/api/entitlement", json={"paid": True})
-    assert response.status_code == 400
+    assert response.status_code in (404, 405)
 
 
 def test_ingest_accepts_client_transcript(client: TestClient) -> None:
