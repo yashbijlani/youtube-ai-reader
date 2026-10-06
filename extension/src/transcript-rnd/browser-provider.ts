@@ -21,6 +21,7 @@ interface RawCapture {
   bytes: number;
   paramKeys: string[];
   text: string;
+  videoId?: string;
 }
 
 export interface BrowserTranscriptResult {
@@ -66,19 +67,27 @@ export const MAX_CAPTURE_BYTES = 8_000_000;
 
 /**
  * Read the largest caption body the MAIN-world interceptor stashed on
- * `window.__yairCaptured`. Must match the global written by `page-interceptor.ts`.
+ * `window.__yairCaptured`, restricted to the requested video id. On YouTube the
+ * page is not reloaded between videos, so the buffer accumulates across videos;
+ * filtering by the caption URL's `v` param ensures we never ingest a previous
+ * video's captions under the new one.
+ *
  * Self-contained: Chrome serializes this function body into the page.
  */
-export function readPageCaptures(): RawCapture | null {
+export function readPageCaptures(videoId = ""): RawCapture | null {
   const w = window as unknown as { __yairCaptured?: RawCapture[] };
   // 8_000_000 must match MAX_CAPTURE_BYTES (function body is serialized alone).
-  const caps = (w.__yairCaptured || []).filter((c) => c && c.bytes > 0 && c.bytes <= 8_000_000);
+  const caps = (w.__yairCaptured || []).filter(
+    (c) => c && c.bytes > 0 && c.bytes <= 8_000_000 && (!videoId || c.videoId === videoId),
+  );
   caps.sort((a, b) => b.bytes - a.bytes);
   return caps[0] || null;
 }
 
 export interface BrowserProviderOptions {
   prefLang?: string;
+  /** Only accept captures that belong to this YouTube video id. */
+  videoId?: string;
   interceptTimeoutMs?: number;
   domFallbackMs?: number;
   /** How long the largest capture must stay stable before we stop (tests). */
@@ -99,6 +108,7 @@ export class BrowserTranscriptProvider {
 
   async extract(tabId: number, options: BrowserProviderOptions = {}): Promise<BrowserTranscriptResult | null> {
     const prefLang = options.prefLang ?? "en";
+    const expectedVideoId = options.videoId ?? "";
     const timeoutMs = options.interceptTimeoutMs ?? 25000;
     const domMs = options.domFallbackMs ?? 8000;
     const started = this.now();
@@ -140,7 +150,7 @@ export class BrowserTranscriptProvider {
       capture = await this.scripting.evaluateMainWorld<RawCapture | null>(
         tabId,
         readPageCaptures as (...a: never[]) => RawCapture | null,
-        [],
+        [expectedVideoId],
       );
       if (capture?.bytes) {
         if (capture.bytes > bestBytes) {

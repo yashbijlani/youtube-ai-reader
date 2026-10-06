@@ -172,17 +172,20 @@ function pendingPayload(tabId: number, videoId: string): ClientTranscriptPayload
   };
 }
 
-// In-flight extractions per tab, so a pre-extraction on navigation and an
-// awaited request from the panel share one capture instead of racing.
-const extractionInflight: Record<number, Promise<TranscriptExtractionResult>> = {};
+// In-flight extractions, keyed by tab + video, so a pre-extraction on navigation
+// and an awaited request from the panel share one capture instead of racing —
+// and one video's request never returns another video's capture.
+const extractionInflight: Record<string, Promise<TranscriptExtractionResult>> = {};
 
 function extractAndStore(tabId: number, videoId: string): Promise<TranscriptExtractionResult> {
-  const existing = extractionInflight[tabId];
+  const inflightKey = `${tabId}:${videoId}`;
+  const existing = extractionInflight[inflightKey];
   if (existing) return existing;
   const task = (async (): Promise<TranscriptExtractionResult> => {
     try {
       const result = await browserProvider.extract(tabId, {
         prefLang: "en",
+        videoId,
         interceptTimeoutMs: 20000,
         domFallbackMs: 8000,
       });
@@ -198,10 +201,32 @@ function extractAndStore(tabId: number, videoId: string): Promise<TranscriptExtr
       return { status: "error", message: (error as Error).message };
     }
   })().finally(() => {
-    delete extractionInflight[tabId];
+    delete extractionInflight[inflightKey];
   });
-  extractionInflight[tabId] = task;
+  extractionInflight[inflightKey] = task;
   return task;
+}
+
+// Clear the page-visible capture buffer when the video changes so a previous
+// video's (possibly larger) captions can't be picked up for the new video.
+const RESET_PAGE_CAPTURES = (): void => {
+  try {
+    (window as unknown as { __yairCaptured?: unknown[] }).__yairCaptured = [];
+  } catch {
+    /* ignore */
+  }
+};
+
+async function clearPageCaptures(tabId: number): Promise<void> {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      world: "MAIN",
+      func: RESET_PAGE_CAPTURES,
+    });
+  } catch {
+    /* ignore */
+  }
 }
 
 const extractionTimers: Record<number, number> = {};
@@ -276,6 +301,8 @@ async function handle(
       ctx.requestedVideoId = null;
       if (!message.video) ctx.playbackSeconds = null;
       ctx.updatedAt = Date.now();
+      delete pendingCaptures[tabId];
+      void clearPageCaptures(tabId);
       broadcast(tabId, null);
       if (message.video) scheduleExtraction(tabId, message.video.videoId);
       return { ok: true };
@@ -420,8 +447,10 @@ chrome.tabs.onActivated.addListener(({ tabId }) => {
 chrome.tabs.onRemoved.addListener((tabId) => {
   delete tabStates[tabId];
   delete extractionTimers[tabId];
-  delete extractionInflight[tabId];
   delete pendingCaptures[tabId];
+  for (const key of Object.keys(extractionInflight)) {
+    if (key.startsWith(`${tabId}:`)) delete extractionInflight[key];
+  }
 });
 
 function configurePanelBehavior(): void {

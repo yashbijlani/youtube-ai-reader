@@ -75,7 +75,7 @@ export function useVideoReader(
             extraction &&
             extraction.status === "ok" &&
             hasBrowserTranscript(extraction) &&
-            (!extraction.payload.videoId || extraction.payload.videoId === video.videoId)
+            extraction.payload.videoId === video.videoId
               ? extraction.payload
               : null;
           console.log(

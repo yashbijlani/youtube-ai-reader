@@ -134,7 +134,7 @@ class Settings(BaseSettings):
     job_queue_timeout_seconds: float = Field(default=45.0, alias="JOB_QUEUE_TIMEOUT_SECONDS")
     cache_enabled: bool = Field(default=True, alias="CACHE_ENABLED")
     # Bump to invalidate all cached canonical videos (self-healing after bugs).
-    cache_version: int = Field(default=2, alias="CACHE_VERSION")
+    cache_version: int = Field(default=3, alias="CACHE_VERSION")
     prompt_version: int = Field(default=1, alias="PROMPT_VERSION")
 
     # --------------------------------------------------------- quotas

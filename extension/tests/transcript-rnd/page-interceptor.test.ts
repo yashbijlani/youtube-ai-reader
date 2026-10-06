@@ -93,4 +93,20 @@ describe("pageInterceptor (MAIN world)", () => {
     expect(patched.DONE).toBe(4);
     expect(patched.OPENED).toBe(1);
   });
+
+  it("filters captures by video id (prevents cross-video ingestion)", async () => {
+    pageInterceptor({ token: "tok-1" });
+    const fire = (v: string, text: string) => {
+      const xhr = new window.XMLHttpRequest() as unknown as FakeXHR;
+      xhr.open("GET", `https://www.youtube.com/api/timedtext?v=${v}&pot=x&fmt=json3`);
+      xhr.responseText = text;
+      xhr.dispatchEvent(new Event("load"));
+    };
+    fire("AAAAAAA1111", JSON.stringify({ events: [{ segs: [{ utf8: "for A" }] }] }));
+    fire("BBBBBBB2222", JSON.stringify({ events: [{ segs: [{ utf8: "for B" }] }] }));
+    await tick();
+    expect(readPageCaptures("AAAAAAA1111")?.text).toContain("for A");
+    expect(readPageCaptures("BBBBBBB2222")?.text).toContain("for B");
+    expect(readPageCaptures("CCCCCCC3333")).toBeNull();
+  });
 });
