@@ -34,6 +34,28 @@ def test_security_headers_are_set(tmp_path) -> None:
         assert response.headers.get("x-frame-options") == "DENY"
 
 
+def test_cors_preflight_is_allowed_with_auth_required(tmp_path) -> None:
+    settings = _settings(tmp_path)
+    settings.auth_required = True
+    settings.supabase_jwt_secret = "jwt-secret"
+    settings.rate_limit_general_per_minute = 1
+    app = create_app(settings)
+    origin = "chrome-extension://abcdefghijklmnopabcdefghijklmnop"
+    with TestClient(app) as client:
+        # Repeated preflights must not be rate-limited or rejected by auth.
+        for _ in range(3):
+            response = client.options(
+                "/api/me",
+                headers={
+                    "Origin": origin,
+                    "Access-Control-Request-Method": "GET",
+                    "Access-Control-Request-Headers": "authorization,x-install-id",
+                },
+            )
+            assert response.status_code == 200
+            assert response.headers.get("access-control-allow-origin") == origin
+
+
 def test_client_transcripts_can_be_disabled(tmp_path) -> None:
     settings = _settings(tmp_path)
     settings.trust_client_transcripts = False

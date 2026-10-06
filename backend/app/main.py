@@ -128,7 +128,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         settings: Settings = app.state.settings
         path = request.url.path
         public = (
-            path in ("/api/health",)
+            request.method == "OPTIONS"
+            or path in ("/api/health",)
             or path.startswith("/api/billing/webhook")
             or path.startswith("/api/billing/checkout")
             or path.startswith("/api/billing/order/")
@@ -173,7 +174,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def access_log_and_general_limit(request: Request, call_next):
         settings: Settings = app.state.settings
         path = request.url.path
-        if path.startswith("/api") and path != "/api/health":
+        # CORS preflight requests must not be rate-limited or authenticated, or
+        # the browser never receives Access-Control-Allow-* headers.
+        if path.startswith("/api") and path != "/api/health" and request.method != "OPTIONS":
             ip = request.client.host if request.client else "unknown"
             if settings.trust_proxy and request.headers.get("x-forwarded-for"):
                 ip = request.headers["x-forwarded-for"].split(",")[0].strip()
