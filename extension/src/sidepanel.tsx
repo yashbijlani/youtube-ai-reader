@@ -202,7 +202,7 @@ function App() {
       <>
         <Tabs active={tab} onChange={handleTabChange} counts={counts} />
         <main className="content">
-          <div className="content-inner">
+          <div className={`content-inner${tab === "chat" ? " content-fill" : ""}`}>
             {tab === "overview" ? (
               <OverviewTab
                 analysis={mergedAnalysis}

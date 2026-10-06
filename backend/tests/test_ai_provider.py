@@ -27,6 +27,15 @@ def test_classify_terminal_errors() -> None:
     assert AIFundingError().terminal is True
 
 
+def test_classify_unknown_model_400_is_terminal() -> None:
+    # DeepSeek reports an unknown model as HTTP 400.
+    error = _classify_error(
+        400, "The supported API model names are deepseek-flash, but you passed x", "x"
+    )
+    assert isinstance(error, AIModelUnavailable)
+    assert error.terminal is True
+
+
 async def test_stream_retries_then_succeeds() -> None:
     settings = Settings(_env_file=None)
     settings.gemini_api_key = "test"

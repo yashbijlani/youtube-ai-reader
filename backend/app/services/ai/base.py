@@ -109,8 +109,22 @@ def classify_error(status: int, detail: str, model: str) -> AIProviderError:
         return AIAccessDenied()
     if status == 404:
         return AIModelUnavailable(model)
-    if status == 400 and ("api key not valid" in lowered or "api_key_invalid" in lowered):
-        return AIAccessDenied()
+    if status == 400:
+        if "api key not valid" in lowered or "api_key_invalid" in lowered:
+            return AIAccessDenied()
+        # Some providers (e.g. DeepSeek) report an unknown model as HTTP 400.
+        if "model" in lowered and any(
+            marker in lowered
+            for marker in (
+                "not exist",
+                "does not exist",
+                "supported api model names",
+                "invalid model",
+                "unknown model",
+                "model not found",
+            )
+        ):
+            return AIModelUnavailable(model)
     if status in (408, 429):
         return AIProviderError(f"The AI service is busy (HTTP {status}).")
     if status >= 500:
