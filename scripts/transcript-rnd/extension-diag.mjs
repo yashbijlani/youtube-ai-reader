@@ -71,6 +71,12 @@ try {
     await new Promise((r) => setTimeout(r, 500));
   }
   console.log("xhrCheck:", JSON.stringify(xhrCheck));
+  const button = await page.evaluate(() => {
+    const host = document.getElementById("yair-read-button-host");
+    const btn = host?.shadowRoot?.querySelector("button");
+    return { host: Boolean(host), label: btn?.textContent?.trim() ?? null };
+  });
+  console.log("button:", JSON.stringify(button));
   console.log("captures:", JSON.stringify(captures));
   console.log("page errors:", JSON.stringify(pageErrors.slice(0, 8)));
 
