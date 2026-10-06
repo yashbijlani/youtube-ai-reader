@@ -11,7 +11,7 @@ export const SITE = {
   title: "YouTube AI Reader — Read, Search & Ask Any YouTube Video",
   description:
     "Turn YouTube videos into readable, searchable and interactive AI experiences. Get summaries, key ideas, chapters and grounded answers with timestamps.",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://youtube-ai-reader.vercel.app",
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://youtube-ai-reader-mt4h.vercel.app",
   locale: "en_US",
 } as const;
 
@@ -38,7 +38,7 @@ export const APP_URL = "";
  * When left as the token below the UI renders a clearly marked placeholder
  * instead of inventing a contact address.
  */
-export const SUPPORT_EMAIL = "CONTACT_EMAIL";
+export const SUPPORT_EMAIL = "yashbijlani2004@gmail.com";
 
 /**
  * TODO: Replace if you operate under a registered legal entity.

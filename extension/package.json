@@ -6,6 +6,7 @@
   "description": "Chrome extension that turns YouTube videos into a readable, searchable, askable AI experience.",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "package": "node scripts/build.mjs && node scripts/package-store.mjs",
     "build:rnd": "vite build --config vite.rnd.config.ts",
     "watch": "node scripts/build.mjs --watch",
     "dev": "vite",

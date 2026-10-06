@@ -10,6 +10,7 @@ venv/
 # Node
 node_modules/
 extension/dist/
+extension/store/
 *.tsbuildinfo
 
 # Env / secrets
