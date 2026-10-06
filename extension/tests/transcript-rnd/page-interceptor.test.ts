@@ -4,6 +4,8 @@ import { pageInterceptor } from "../../src/transcript-rnd/page-interceptor";
 import { readPageCaptures } from "../../src/transcript-rnd/browser-provider";
 
 class FakeXHR extends EventTarget {
+  static DONE = 4;
+  static OPENED = 1;
   responseText = "";
   open = (..._args: unknown[]) => {};
 }
@@ -83,5 +85,12 @@ describe("pageInterceptor (MAIN world)", () => {
     pageInterceptor({ token: "tok-1" });
     pageInterceptor({ token: "tok-2" });
     expect((window as unknown as { __yairInterceptorInstalled?: boolean }).__yairInterceptorInstalled).toBe(true);
+  });
+
+  it("preserves static constants on the patched XMLHttpRequest", () => {
+    pageInterceptor({ token: "tok-1" });
+    const patched = window.XMLHttpRequest as unknown as { DONE?: number; OPENED?: number };
+    expect(patched.DONE).toBe(4);
+    expect(patched.OPENED).toBe(1);
   });
 });

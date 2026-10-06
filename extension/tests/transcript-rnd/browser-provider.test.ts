@@ -39,7 +39,7 @@ describe("BrowserTranscriptProvider", () => {
         return null;
       }),
     });
-    const result = await provider.extract(1, { prefLang: "en", interceptTimeoutMs: 5000 });
+    const result = await provider.extract(1, { prefLang: "en", interceptTimeoutMs: 5000, stableMs: 20 });
     expect(result).not.toBeNull();
     expect(result?.method).toBe("main_world_intercept");
     expect(result?.segments).toHaveLength(2);
@@ -85,7 +85,7 @@ describe("BrowserTranscriptProvider", () => {
         return null;
       }),
     });
-    const result = await provider.extract(1, { interceptTimeoutMs: 200, domFallbackMs: 100 });
+    const result = await provider.extract(1, { interceptTimeoutMs: 200, domFallbackMs: 100, stableMs: 20 });
     expect(result?.method).toBe("caption_dom");
     expect(result?.segments[0].text).toBe("dom fallback");
     expect(toClientPayload(result!).format).toBe("segments");

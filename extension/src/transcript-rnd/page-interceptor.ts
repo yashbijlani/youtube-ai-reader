@@ -101,6 +101,18 @@ export function pageInterceptor(config: PageInterceptorConfig): void {
       return xhr;
     }
     (PatchedXHR as unknown as { prototype: unknown }).prototype = OrigXHR.prototype;
+    // Preserve static constants (DONE, OPENED, ..., and any others) so page code
+    // that reads XMLHttpRequest.DONE keeps working.
+    for (const key of Object.getOwnPropertyNames(OrigXHR)) {
+      if (key === "prototype" || key === "length" || key === "name") continue;
+      try {
+        (PatchedXHR as unknown as Record<string, unknown>)[key] = (
+          OrigXHR as unknown as Record<string, unknown>
+        )[key];
+      } catch {
+        /* ignore read-only */
+      }
+    }
     window.XMLHttpRequest = PatchedXHR as unknown as typeof XMLHttpRequest;
 
     // --- fetch (defensive: some clients use fetch) ---

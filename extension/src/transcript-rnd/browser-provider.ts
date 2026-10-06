@@ -81,6 +81,8 @@ export interface BrowserProviderOptions {
   prefLang?: string;
   interceptTimeoutMs?: number;
   domFallbackMs?: number;
+  /** How long the largest capture must stay stable before we stop (tests). */
+  stableMs?: number;
   /** Override for tests. */
   scripting?: PageScripting;
   now?: () => number;
@@ -133,7 +135,7 @@ export class BrowserTranscriptProvider {
     const maxRetriggers = 3;
     // With a known duration we allow longer for the full track to arrive; if the
     // duration is unknown (tests/edge cases) keep the wait short.
-    const stableMs = duration > 0 ? 8_000 : 800;
+    const stableMs = options.stableMs ?? (duration > 0 ? 8_000 : 800);
     while (this.now() < deadline) {
       capture = await this.scripting.evaluateMainWorld<RawCapture | null>(
         tabId,

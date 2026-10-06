@@ -9,6 +9,7 @@
     "https://www.youtube.com/*",
     "https://m.youtube.com/*",
     "https://*.supabase.co/*",
+    "https://youtube-ai-reader.onrender.com/*",
     "https://api.razorpay.com/*",
     "https://checkout.razorpay.com/*",
     "http://localhost/*",

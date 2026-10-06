@@ -184,8 +184,7 @@ describe("Google sign-in", () => {
     vi.stubGlobal("fetch", vi.fn(async () => userResponse()));
     const first = auth.signInWithGoogle();
     const second = auth.signInWithGoogle();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(launchWebAuthFlow).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(launchWebAuthFlow).toHaveBeenCalledTimes(1));
     resolveFlow(`${auth.getOAuthRedirectUrl()}#access_token=shared-token`);
     const [a, b] = await Promise.all([first, second]);
     expect(a.accessToken).toBe("shared-token");
