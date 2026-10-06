@@ -15,6 +15,9 @@ const TRANSCRIPTS_KEY = "yair.clientTranscripts";
 const PANEL_PATH = "sidepanel.html";
 const ACTION_TITLE_YT = "YouTube AI Reader";
 const ACTION_TITLE_OTHER = "Open a YouTube video to use YouTube AI Reader";
+const BUILD = "b1";
+const API_BASE = (import.meta.env?.VITE_API_BASE_URL as string | undefined) ?? "(default)";
+console.log(`[yair] background ready build=${BUILD} backend=${API_BASE}`);
 
 interface TabContext {
   video: VideoInfo | null;

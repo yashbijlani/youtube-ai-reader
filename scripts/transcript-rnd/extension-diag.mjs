@@ -10,6 +10,7 @@ import { existsSync } from "node:fs";
 
 const CHROME = process.env.CHROME_PATH || "/usr/bin/chromium";
 const BACKEND = process.env.BACKEND || "https://youtube-ai-reader.onrender.com";
+const VIDEO = process.env.VIDEO || "aircAruvnKk";
 const dist = fileURLToPath(new URL("../../extension/dist", import.meta.url));
 if (!existsSync(dist)) {
   console.error("extension/dist not found");
@@ -46,7 +47,7 @@ try {
   await page.setUserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36");
   await page.goto("https://www.youtube.com/?hl=en", { waitUntil: "domcontentloaded", timeout: 45000 }).catch(() => {});
   await new Promise((r) => setTimeout(r, 1200));
-  await page.goto("https://www.youtube.com/watch?v=aircAruvnKk&hl=en&has_verified=1&cc_load_policy=1", { waitUntil: "domcontentloaded", timeout: 45000 });
+  await page.goto(`https://www.youtube.com/watch?v=${VIDEO}&hl=en&has_verified=1&cc_load_policy=1`, { waitUntil: "domcontentloaded", timeout: 45000 });
   await page.waitForFunction(() => Boolean(window.ytInitialPlayerResponse), { timeout: 20000 }).catch(() => {});
 
   const xhrCheck = await page.evaluate(() => {
@@ -94,6 +95,32 @@ try {
     return out;
   }, BACKEND);
   console.log("SW -> backend:", JSON.stringify(probe, null, 1));
+
+  // ---- (c) exercise the real background extraction path (as the side panel does)
+  const extId = swTarget.url().split("/")[2];
+  const extPage = await browser.newPage();
+  await extPage.goto(`chrome-extension://${extId}/sidepanel.html`, { waitUntil: "domcontentloaded" }).catch(() => {});
+  const bg = await extPage
+    .evaluate(async (videoId) => {
+      const tabs = await chrome.tabs.query({ url: ["https://www.youtube.com/*"] });
+      const yt = tabs.find((t) => (t.url || "").includes(`watch?v=${videoId}`));
+      if (!yt?.id) return { error: "no youtube tab", tabs: tabs.map((t) => t.url) };
+      const r = await chrome.runtime.sendMessage({
+        type: "EXTRACT_CLIENT_TRANSCRIPT",
+        videoId,
+        tabId: yt.id,
+      });
+      return {
+        status: r?.status,
+        method: r?.payload?.method,
+        format: r?.payload?.format,
+        contentLen: r?.payload?.content?.length ?? null,
+        segments: r?.payload?.segments?.length ?? null,
+        error: r?.error ?? r?.message ?? null,
+      };
+    }, VIDEO)
+    .catch((e) => ({ evalError: String(e).slice(0, 200) }));
+  console.log("background EXTRACT:", JSON.stringify(bg));
 } finally {
   await browser.close();
 }

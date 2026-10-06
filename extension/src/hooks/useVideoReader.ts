@@ -78,6 +78,12 @@ export function useVideoReader(
             (!extraction.payload.videoId || extraction.payload.videoId === video.videoId)
               ? extraction.payload
               : null;
+          console.log(
+            "[yair] extract",
+            extraction?.status ?? "no-response",
+            "method=" + (client?.method ?? "-"),
+            "bytes=" + (client?.content?.length ?? client?.segments?.length ?? 0),
+          );
           if (client) {
             try {
               const next = await api.ingest(apiBaseUrl, video.videoId, {
@@ -91,6 +97,7 @@ export function useVideoReader(
                 segments: client.segments,
                 method: client.method,
               });
+              console.log("[yair] ingest ok", video.videoId, next.status, next.stage);
               setState(next);
               return;
             } catch (err) {
@@ -107,10 +114,16 @@ export function useVideoReader(
                 setError(apiError);
                 return;
               }
+              console.warn(
+                "[yair] ingest failed; falling back to server processing",
+                apiError.code,
+                apiError.message,
+              );
               // Otherwise fall back to server-side processing.
             }
           }
         }
+        console.warn("[yair] using server-side processing for", video.videoId, "(force=" + force + ")");
         const next = await api.processVideo(apiBaseUrl, video.url, force);
         setState(next);
       } catch (err) {

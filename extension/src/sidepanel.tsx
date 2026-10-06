@@ -40,7 +40,10 @@ function App() {
   }, [reader.state?.status, video?.videoId]);
 
   useEffect(() => {
-    void getSettings().then((settings) => setApiBaseUrl(settings.apiBaseUrl));
+    void getSettings().then((settings) => {
+      console.log("[yair] panel backend=", settings.apiBaseUrl);
+      setApiBaseUrl(settings.apiBaseUrl);
+    });
   }, []);
 
   const rawState = reader.state;
