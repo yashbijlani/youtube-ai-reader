@@ -107,16 +107,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = settings or get_settings()
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=app.state.settings.cors_origins,
-        allow_origin_regex=app.state.settings.cors_allow_origin_regex,
-        allow_credentials=False,
-        allow_methods=["GET", "POST", "OPTIONS"],
-        allow_headers=["Content-Type", "Authorization", "X-Install-Id"],
-        max_age=3600,
-    )
-
     @app.middleware("http")
     async def authenticate_request(request: Request, call_next):
         """Verify the Supabase JWT and attach the verified user id.
@@ -232,6 +222,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 }
             },
         )
+
+    # CORS is added last so it is the OUTERMOST middleware: it must wrap every
+    # response, including 401/429 JSON errors returned directly by the auth and
+    # rate-limit middleware, or browsers block those cross-origin.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=app.state.settings.cors_origins,
+        allow_origin_regex=app.state.settings.cors_allow_origin_regex,
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization", "X-Install-Id"],
+        max_age=3600,
+    )
 
     app.include_router(router)
     return app

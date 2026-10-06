@@ -56,6 +56,20 @@ def test_cors_preflight_is_allowed_with_auth_required(tmp_path) -> None:
             assert response.headers.get("access-control-allow-origin") == origin
 
 
+def test_middleware_error_responses_include_cors_headers(tmp_path) -> None:
+    """401/429 responses returned by middleware must still carry CORS headers."""
+    settings = _settings(tmp_path)
+    settings.auth_required = True
+    settings.supabase_jwt_secret = "jwt-secret"
+    settings.rate_limit_general_per_minute = 0
+    app = create_app(settings)
+    origin = "chrome-extension://abcdefghijklmnopabcdefghijklmnop"
+    with TestClient(app) as client:
+        response = client.get("/api/me", headers={"Origin": origin})
+        assert response.status_code == 401
+        assert response.headers.get("access-control-allow-origin") == origin
+
+
 def test_client_transcripts_can_be_disabled(tmp_path) -> None:
     settings = _settings(tmp_path)
     settings.trust_client_transcripts = False
