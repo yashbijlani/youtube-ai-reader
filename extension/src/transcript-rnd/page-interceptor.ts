@@ -56,6 +56,13 @@ export function pageInterceptor(config: PageInterceptorConfig): void {
     const emit = (via: string, url: string, text: string): void => {
       if (!text || text.length === 0) return;
       state.captures += 1;
+      const currentPageVideoId = (): string => {
+        try {
+          return new URL(location.href).searchParams.get("v") || "";
+        } catch {
+          return "";
+        }
+      };
       const payload = {
         source: SOURCE,
         token: TOKEN,
@@ -63,6 +70,8 @@ export function pageInterceptor(config: PageInterceptorConfig): void {
         via,
         // The caption URL's `v` param identifies the video (not sensitive).
         videoId: videoIdOf(url),
+        // The watch page's own video id, used when a caption URL lacks `v`.
+        pageVideoId: currentPageVideoId(),
         paramKeys: paramKeys(url),
         hasPot: /[?&]pot=/.test(url),
         bytes: text.length,

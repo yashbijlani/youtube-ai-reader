@@ -23,6 +23,7 @@ interface RawCapture {
   paramKeys: string[];
   text: string;
   videoId?: string;
+  pageVideoId?: string;
 }
 
 export interface BrowserTranscriptResult {
@@ -79,10 +80,16 @@ export function readPageCaptures(videoId = ""): RawCapture | null {
   const w = window as unknown as { __yairCaptured?: RawCapture[] };
   // 8_000_000 must match MAX_CAPTURE_BYTES (function body is serialized alone).
   const caps = (w.__yairCaptured || []).filter(
-    (c) => c && c.bytes > 0 && c.bytes <= 8_000_000 && (!videoId || c.videoId === videoId),
+    (c) => c && c.bytes > 0 && c.bytes <= 8_000_000,
   );
-  caps.sort((a, b) => b.bytes - a.bytes);
-  return caps[0] || null;
+  // Prefer captures whose caption URL `v` matches. If none do, accept a capture
+  // that lacks a `v` but was emitted on the watch page for this same video.
+  let candidates = videoId ? caps.filter((c) => c.videoId === videoId) : caps;
+  if (videoId && candidates.length === 0) {
+    candidates = caps.filter((c) => !c.videoId && c.pageVideoId === videoId);
+  }
+  candidates.sort((a, b) => b.bytes - a.bytes);
+  return candidates[0] || null;
 }
 
 export interface BrowserProviderOptions {
@@ -126,7 +133,7 @@ export class BrowserTranscriptProvider {
     const duration = await this.scripting
       .evaluateMainWorld<number>(tabId, getMediaDuration as (...a: never[]) => number, [])
       .catch(() => 0);
-    await this.scripting.evaluateMainWorld(tabId, triggerCaptionRequest as (...a: never[]) => CaptionTrackInfo, [prefLang]);
+    await this.scripting.evaluateMainWorld(tabId, triggerCaptionRequest as unknown as (...a: never[]) => CaptionTrackInfo, [prefLang]);
 
     // Poll for the caption response, retriggering the player a couple of times
     // for slow/ASR-only tracks. Retriggers only toggle YouTube's own captions in
@@ -167,12 +174,15 @@ export class BrowserTranscriptProvider {
         retriggers += 1;
         nextRetrigger = this.now() + 6_000;
         await this.scripting
-          .evaluateMainWorld(tabId, triggerCaptionRequest as (...a: never[]) => CaptionTrackInfo, [prefLang])
+          .evaluateMainWorld(tabId, triggerCaptionRequest as unknown as (...a: never[]) => CaptionTrackInfo, [prefLang])
           .catch(() => null);
       }
       await new Promise((r) => setTimeout(r, 400));
     }
     capture = best;
+    console.log(
+      `[yair] browser method=intercept bytes=${bestBytes} segments=${capture ? normalizeSegments(parseJson3(capture.text)).length : 0}`,
+    );
 
     if (capture?.text) {
       const segments = normalizeSegments(parseJson3(capture.text));
@@ -197,6 +207,7 @@ export class BrowserTranscriptProvider {
         [10000],
       )
       .catch(() => []);
+    console.log(`[yair] browser method=panel segments=${panel?.length ?? 0}`);
     if (panel && panel.length > 0) {
       return {
         method: "transcript_panel",
@@ -217,6 +228,7 @@ export class BrowserTranscriptProvider {
         [domMs, 1000],
       )
       .catch(() => []);
+    console.log(`[yair] browser method=dom segments=${dom?.length ?? 0}`);
     if (dom && dom.length > 0) {
       return {
         method: "caption_dom",

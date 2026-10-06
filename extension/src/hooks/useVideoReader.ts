@@ -121,15 +121,6 @@ export function useVideoReader(
               );
               // Otherwise fall back to server-side processing.
             }
-          } else if (extraction?.status === "no_captions") {
-            // Every browser method came up empty. Server yt-dlp cannot help (and
-            // is IP-blocked on datacenter hosts), so surface the accurate reason
-            // instead of a misleading bot-check error.
-            console.warn("[yair] no browser captions for", video.videoId, "— not calling server yt-dlp");
-            setError(
-              new ApiError("transcript_unavailable", "This video has no captions available to read."),
-            );
-            return;
           }
         }
         console.warn("[yair] using server-side processing for", video.videoId, "(force=" + force + ")");

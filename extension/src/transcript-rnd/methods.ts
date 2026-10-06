@@ -57,7 +57,7 @@ export function inspectCaptionTracks(prefLang = "en"): CaptionTrackInfo {
  * Self-contained: Chrome serializes only this function body into the MAIN world,
  * so it must not call sibling module functions.
  */
-export function triggerCaptionRequest(prefLang = "en"): CaptionTrackInfo {
+export async function triggerCaptionRequest(prefLang = "en"): Promise<CaptionTrackInfo> {
   const p = document.querySelector("#movie_player") as PlayerLike | null;
   const pr =
     (p && typeof p.getPlayerResponse === "function" ? p.getPlayerResponse() : undefined) ||
@@ -75,12 +75,25 @@ export function triggerCaptionRequest(prefLang = "en"): CaptionTrackInfo {
     languages: tracks.map((t) => String(t.languageCode || "")),
     picked: pick ? { languageCode: String(pick.languageCode || ""), kind: pick.kind || "manual" } : null,
   };
+  const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
   try {
     p?.setOption?.("captions", "track", info.picked ? { languageCode: info.picked.languageCode } : { languageCode: prefLang });
   } catch {
     /* ignore */
   }
-  document.querySelector(".ytp-subtitles-button")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  await wait(60);
+  const button = document.querySelector(".ytp-subtitles-button") as HTMLElement | null;
+  const click = () => button?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  // Toggling CC is what forces a *fresh* signed caption request after the
+  // interceptor is installed. Never leave captions off: if they are already on,
+  // toggle off then back on so a new request still fires and ends enabled.
+  if (button?.getAttribute("aria-pressed") === "true") {
+    click();
+    await wait(140);
+    click();
+  } else {
+    click();
+  }
   try {
     p?.playVideo?.();
   } catch {
