@@ -4,7 +4,6 @@ import { AlertIcon, RefreshIcon } from "./Icons";
 interface ErrorViewProps {
   error: ApiError | { code: string; message: string };
   onRetry: () => void;
-  onReprocess: () => void;
   busy: boolean;
 }
 
@@ -39,9 +38,8 @@ function hintFor(code: string): string | null {
   }
 }
 
-export function ErrorView({ error, onRetry, onReprocess, busy }: ErrorViewProps) {
+export function ErrorView({ error, onRetry, busy }: ErrorViewProps) {
   const hint = hintFor(error.code);
-  const isNetwork = error.code === "network_error";
   return (
     <div className="center-state">
       <span className="state-icon">
@@ -54,11 +52,6 @@ export function ErrorView({ error, onRetry, onReprocess, busy }: ErrorViewProps)
         <button type="button" className="button primary" onClick={onRetry} disabled={busy}>
           <RefreshIcon size={13} /> Try again
         </button>
-        {!isNetwork ? (
-          <button type="button" className="button secondary" onClick={onReprocess} disabled={busy}>
-            Reprocess
-          </button>
-        ) : null}
       </div>
     </div>
   );

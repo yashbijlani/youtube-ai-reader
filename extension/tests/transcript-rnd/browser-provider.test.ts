@@ -68,6 +68,22 @@ describe("BrowserTranscriptProvider", () => {
     expect(payload.format).toBe("segments");
   });
 
+  it("falls back to the transcript panel before DOM captions", async () => {
+    const provider = new BrowserTranscriptProvider({
+      scripting: makeScripting((name) => {
+        if (name === "inspectCaptionTracks" || name === "triggerCaptionRequest") return TRACKS;
+        if (name === "readPageCaptures") return null;
+        if (name === "captureTranscriptPanel") return [{ start: 5, text: "panel line" }];
+        if (name === "captureDomCaptions") return [{ start: 1, text: "dom line" }];
+        return null;
+      }),
+    });
+    const result = await provider.extract(1, { interceptTimeoutMs: 60, domFallbackMs: 100 });
+    expect(result?.method).toBe("transcript_panel");
+    expect(result?.segments[0].text).toBe("panel line");
+    expect(toClientPayload(result!).method).toBe("browser_intercept");
+  });
+
   it("returns null when neither interception nor DOM yields a transcript", async () => {
     const provider = new BrowserTranscriptProvider({
       scripting: makeScripting(() => null),

@@ -119,6 +119,24 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.loading, auth.session?.user.id, video?.videoId]);
 
+  // A limit error can leave a stale paywall behind (e.g. a transient server-side
+  // profile race). Re-check authoritative usage and self-heal when quota remains.
+  useEffect(() => {
+    if (!reader.limitReached) return;
+    let cancelled = false;
+    void entitlement.refresh().then((info) => {
+      if (cancelled || !info) return;
+      const paid = info.subscription?.active ?? false;
+      const limit = info.usage.free_limit;
+      const used = info.usage.lifetime_videos;
+      if (paid || used < limit) reader.clearLimitReached();
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reader.limitReached]);
+
   const handleTabChange = useCallback((next: TabId) => setTab(next), []);
 
   const seek = useCallback(
@@ -178,7 +196,6 @@ function App() {
         error={reader.error}
         busy={reader.starting}
         onRetry={() => void reader.process(false)}
-        onReprocess={() => void reader.process(true)}
       />
     );
   } else if (state?.status === "error") {
@@ -188,7 +205,6 @@ function App() {
         error={error}
         busy={reader.starting}
         onRetry={() => void reader.process(false)}
-        onReprocess={() => void reader.process(true)}
       />
     );
   } else if (state?.status === "processing") {

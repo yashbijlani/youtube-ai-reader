@@ -3,8 +3,9 @@
  *
  * Fallback chain (to be validated by the R&D results):
  *   1. main_world_intercept  — observe YouTube's own signed caption XHR
- *   2. caption_dom           — scrape rendered captions while playing (lossy)
- *   3. (caller falls back to server-side yt-dlp via the existing API)
+ *   2. transcript_panel      — scrape YouTube's own transcript panel (no playback)
+ *   3. caption_dom           — scrape rendered captions while playing (lossy)
+ *   4. (caller falls back to server-side yt-dlp via the existing API)
  *
  * The provider is written against a small `PageScripting` seam so it can run in
  * the MV3 background worker and be unit-tested with a fake.
@@ -12,7 +13,7 @@
 
 import { pageInterceptor, type PageInterceptorConfig } from "./page-interceptor";
 import { parseJson3, normalizeSegments, type RawSegment } from "./parseJson3";
-import { captureDomCaptions, getMediaDuration, inspectCaptionTracks, triggerCaptionRequest, type CaptionTrackInfo } from "./methods";
+import { captureDomCaptions, captureTranscriptPanel, getMediaDuration, inspectCaptionTracks, triggerCaptionRequest, type CaptionTrackInfo } from "./methods";
 import type { ExtractionMethod } from "./types";
 
 interface RawCapture {
@@ -188,7 +189,27 @@ export class BrowserTranscriptProvider {
       }
     }
 
-    // ---- Fallback: rendered captions (lossy)
+    // ---- Fallback 1: YouTube's own transcript panel (no playback required)
+    const panel = await this.scripting
+      .evaluateMainWorld<Array<{ start: number; text: string }>>(
+        tabId,
+        captureTranscriptPanel as unknown as (...a: never[]) => Array<{ start: number; text: string }>,
+        [10000],
+      )
+      .catch(() => []);
+    if (panel && panel.length > 0) {
+      return {
+        method: "transcript_panel",
+        segments: panel.map((d) => ({ start: d.start, end: d.start, text: d.text })),
+        json3: null,
+        language: tracks?.picked?.languageCode ?? null,
+        captionTracks: tracks,
+        latencyMs: this.now() - started,
+        sourceInfo: { samples: panel.length, via: "transcript_panel" },
+      };
+    }
+
+    // ---- Fallback 2: rendered captions (lossy)
     const dom = await this.scripting
       .evaluateMainWorld<Array<{ start: number; text: string }>>(
         tabId,

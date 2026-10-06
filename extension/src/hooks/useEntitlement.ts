@@ -11,7 +11,7 @@ export interface EntitlementController {
   remaining: number;
   loading: boolean;
   error: string | null;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<AccountInfo | null>;
   openPayment: () => void;
   openTrial: () => void;
   manage: () => void;
@@ -33,8 +33,10 @@ export function useEntitlement(apiBaseUrl: string): EntitlementController {
       const info = await api.me(apiBaseUrl);
       setAccount(info);
       setError(null);
+      return info;
     } catch {
       // Account info is unavailable (offline); keep last known state.
+      return null;
     } finally {
       setLoading(false);
     }

@@ -68,7 +68,7 @@ export function AccountMenu({ auth, plan }: AccountMenuProps) {
                 <span className="muted small">
                   {plan.paid
                     ? "Unlimited videos"
-                    : `${plan.remaining} videos remaining (${plan.used}/${plan.limit})`}
+                    : `${plan.remaining} of ${plan.limit} free videos remaining`}
                 </span>
               </div>
               {!plan.paid ? (
