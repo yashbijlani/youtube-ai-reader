@@ -35,6 +35,10 @@ class QuotaService:
         """Reserve one video for this user; raise if the free quota is exhausted."""
         if not self.settings.quota_enabled:
             return QuotaDecision(True, "disabled")
+        # The atomic RPC locks the user's profile row; if it is missing the RPC
+        # reports `user_missing` and we would wrongly block a user who still has
+        # free quota. Make sure the row exists first.
+        await self.store.ensure_user(user_id)
         decision = await self.store.consume_video_quota(
             user_id,
             video_id,
@@ -57,6 +61,10 @@ class QuotaService:
                 result.reason,
                 result.used,
             )
+            if result.reason == "user_missing":
+                # Defensive: a missing profile must never consume the paywall.
+                logger.warning("[quota] profile missing after ensure; allowing user=%s", user_id[:8])
+                return QuotaDecision(True, "user_missing", result.used, result.remaining, result.limit)
             if result.reason == "monthly_limit":
                 raise QuotaExceeded(
                     f"You've used all {self.settings.free_monthly_video_limit} free videos this month. "
@@ -71,6 +79,8 @@ class QuotaService:
     async def reserve_chat(self, user_id: str, period: str) -> QuotaDecision:
         if not self.settings.quota_enabled:
             return QuotaDecision(True, "disabled")
+        # See reserve_video: guarantee the profile row exists before the RPC.
+        await self.store.ensure_user(user_id)
         decision = await self.store.consume_chat_quota(
             user_id, monthly_limit=self.settings.free_monthly_chat_limit, period=period
         )
@@ -82,6 +92,9 @@ class QuotaService:
             limit=int(decision.get("limit") if decision.get("limit") is not None else -1),
         )
         if not result.allowed:
+            if result.reason == "user_missing":
+                logger.warning("[quota] profile missing after ensure; allowing user=%s", user_id[:8])
+                return QuotaDecision(True, "user_missing", result.used, result.remaining, result.limit)
             raise QuotaExceeded(
                 f"You've used all {self.settings.free_monthly_chat_limit} free chat messages this month. "
                 "Upgrade to Pro for unlimited chat."

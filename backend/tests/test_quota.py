@@ -96,3 +96,36 @@ async def test_quota_disabled_bypasses() -> None:
     quota = QuotaService(settings, store)
     for i in range(5):
         assert (await quota.reserve_video("u1", f"video{i:06d}", PERIOD)).allowed
+
+
+class _MissingProfileStore:
+    """Store whose RPC reports ``user_missing`` (profile row not yet created)."""
+
+    def __init__(self) -> None:
+        self.ensured: list[str] = []
+
+    async def ensure_user(self, user_id: str, email: str | None = None) -> dict:
+        self.ensured.append(user_id)
+        return {"id": user_id, "email": email}
+
+    async def consume_video_quota(self, user_id: str, video_id: str, **_kwargs) -> dict:
+        return {"allowed": False, "reason": "user_missing", "used": 0, "remaining": 0, "limit": 3}
+
+    async def consume_chat_quota(self, user_id: str, **_kwargs) -> dict:
+        return {"allowed": False, "reason": "user_missing", "used": 0, "remaining": 0, "limit": 200}
+
+
+async def test_missing_profile_is_ensured_and_never_blocks_video() -> None:
+    store = _MissingProfileStore()
+    quota = QuotaService(_settings(), store)
+    decision = await quota.reserve_video("u1", "aaaaaaaaaaa", PERIOD)
+    assert decision.allowed
+    assert store.ensured == ["u1"]
+
+
+async def test_missing_profile_is_ensured_and_never_blocks_chat() -> None:
+    store = _MissingProfileStore()
+    quota = QuotaService(_settings(), store)
+    decision = await quota.reserve_chat("u1", PERIOD)
+    assert decision.allowed
+    assert store.ensured == ["u1"]
