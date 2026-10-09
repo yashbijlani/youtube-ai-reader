@@ -73,9 +73,9 @@ and Supabase URL/key from `extension/.env` (git-ignored).
 8. Complete the Privacy practices tab and the permission justifications above.
 9. Submit for review.
 
-> Tip: after you have the published ID, you can pin it in dev by adding the
-> `"key"` field to `manifest.json`, so the unpacked ID matches the store ID and
-> the OAuth redirect is identical in both.
+> The published id is pinned in `manifest.json` via the `"key"` field, so a
+> locally loaded unpacked build uses the same id (`oimanaechkdhcpnceadnijpjdhgccdfm`)
+> as the store and the OAuth redirect is identical in dev and production.
 
 ## Policy risk
 

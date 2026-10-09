@@ -2,6 +2,7 @@
   "manifest_version": 3,
   "name": "YouTube AI Reader",
   "version": "0.1.1",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqjtAHuar4VU++0cHyl+2HoB0EPVFEn02BoG+easGeGk+v1fpqT3SXpoN8NxAdD0toyKEekWjdoBtxtyWP5HmAv8OEtA9T3k6qC561B3e8fNPgfotGdjh9bjPosFFy+e6uUpkMChd1IdWo0tezN6OnS1VgosQuQT3oRbHMrqU0og+LtdILFuK0Gk06PxBXnk0Z2zNrTMRitmT1N/O/CHSG2TGZv1xtaPSWtYQjlsIOp1Wl/aCdEV27+4uHSZmOOImEUEIAGHCJjcaS9n9ZtMjtcBT2sqMH7JpKxPwRvNZdfKS5da7rNem9au3kPiWiHUqKYqFR3iGTZgb5lRX/SZRTwIDAQAB",
   "description": "Turn any YouTube video into a readable, searchable, askable AI companion.",
   "minimum_chrome_version": "116",
   "permissions": ["storage", "sidePanel", "scripting", "identity"],
