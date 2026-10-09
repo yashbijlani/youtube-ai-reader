@@ -269,6 +269,8 @@ async function runGoogleSignIn(): Promise<AuthSession> {
   authorizeUrl.searchParams.set("code_challenge", challenge);
   authorizeUrl.searchParams.set("code_challenge_method", "S256");
 
+  console.log("[yair] google oauth redirect URL (must be allow-listed in Supabase):", redirectUri);
+
   let responseUrl: string | undefined;
   try {
     responseUrl = await chrome.identity.launchWebAuthFlow({
@@ -280,6 +282,14 @@ async function runGoogleSignIn(): Promise<AuthSession> {
     // User closed the window, or another flow is still finishing: not an error.
     if (/cancel|only one web auth flow|user (denied|closed)|did not approve/i.test(message)) {
       throw new SignInCancelledError();
+    }
+    if (/authorization page could not be loaded/i.test(message)) {
+      console.warn(
+        "[yair] OAuth page failed to load. Add this redirect URL in Supabase → " +
+          "Authentication → URL Configuration → Redirect URLs:",
+        redirectUri,
+      );
+      throw new Error("Google sign-in couldn't be completed. Please try again in a moment.");
     }
     throw new Error(message);
   }

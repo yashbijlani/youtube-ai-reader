@@ -92,8 +92,8 @@ class Settings(BaseSettings):
     razorpay_webhook_secret: str = Field(default="", alias="RAZORPAY_WEBHOOK_SECRET")
     razorpay_currency: str = Field(default="INR", alias="RAZORPAY_CURRENCY")
     razorpay_plan_amount: int = Field(
-        default=49_900, alias="RAZORPAY_PLAN_AMOUNT"
-    )  # smallest currency unit (paise)
+        default=29_900, alias="RAZORPAY_PLAN_AMOUNT"
+    )  # smallest currency unit (paise) = ₹299
     razorpay_plan_name: str = Field(default="YouTube AI Reader Pro", alias="RAZORPAY_PLAN_NAME")
     razorpay_plan_period_days: int = Field(default=30, alias="RAZORPAY_PLAN_PERIOD_DAYS")
 

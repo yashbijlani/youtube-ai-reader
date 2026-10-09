@@ -38,7 +38,7 @@ export const APP_URL = "";
  * When left as the token below the UI renders a clearly marked placeholder
  * instead of inventing a contact address.
  */
-export const SUPPORT_EMAIL = "yashbijlani2004@gmail.com";
+export const SUPPORT_EMAIL = "optionalgravity@gmail.com";
 
 /**
  * TODO: Replace if you operate under a registered legal entity.
