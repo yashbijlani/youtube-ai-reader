@@ -110,7 +110,8 @@ class Settings(BaseSettings):
     cors_allow_origins: str = Field(default="", alias="CORS_ALLOW_ORIGINS")
     cors_allow_origin_regex: str = Field(
         default=(
-            r"^(chrome-extension://.*|http://localhost(:\d+)?|http://127\.0\.0\.1(:\d+)?)$"
+            r"^(chrome-extension://.*|http://localhost(:\d+)?|http://127\.0\.0\.1(:\d+)?"
+            r"|https://youtube-ai-reader-mt4h\.vercel\.app)$"
         ),
         alias="CORS_ALLOW_ORIGIN_REGEX",
     )
@@ -138,9 +139,15 @@ class Settings(BaseSettings):
     prompt_version: int = Field(default=1, alias="PROMPT_VERSION")
 
     # --------------------------------------------------------- quotas
+    # Anonymous (development) install-id limit; authenticated free users are
+    # limited per calendar/cycle month instead.
     free_video_limit: int = Field(default=3, alias="FREE_VIDEO_LIMIT")
-    free_monthly_video_limit: int = Field(default=5, alias="FREE_MONTHLY_VIDEO_LIMIT")
+    free_monthly_video_limit: int = Field(default=3, alias="FREE_MONTHLY_VIDEO_LIMIT")
+    pro_monthly_video_limit: int = Field(default=50, alias="PRO_MONTHLY_VIDEO_LIMIT")
     free_monthly_chat_limit: int = Field(default=200, alias="FREE_MONTHLY_CHAT_LIMIT")
+    # Per-video duration ceiling by plan (minutes). 0 disables the check.
+    free_max_video_minutes: int = Field(default=60, alias="FREE_MAX_VIDEO_MINUTES")
+    pro_max_video_minutes: int = Field(default=180, alias="PRO_MAX_VIDEO_MINUTES")
     usage_enabled: bool = Field(default=True, alias="USAGE_ENABLED")
     quota_enabled: bool = Field(default=True, alias="QUOTA_ENABLED")
 

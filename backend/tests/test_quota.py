@@ -54,14 +54,35 @@ async def test_monthly_limit_can_be_stricter_than_lifetime() -> None:
         await quota.reserve_video("u1", "ccccccccccc", PERIOD)
 
 
-async def test_active_subscriber_is_unlimited() -> None:
+async def test_active_subscriber_uses_pro_monthly_limit() -> None:
+    settings = _settings()
+    settings.pro_monthly_video_limit = 4
     store = MemoryStore()
     await store.upsert_subscription("u1", {"status": "ACTIVE"})
-    quota = QuotaService(_settings(), store)
-    for i in range(10):
+    quota = QuotaService(settings, store)
+    for i in range(4):
         decision = await quota.reserve_video("u1", f"video{i:06d}", PERIOD)
         assert decision.allowed
-        assert decision.reason == "pro"
+        assert decision.plan == "pro"
+    with pytest.raises(QuotaExceeded):
+        await quota.reserve_video("u1", "video999999", PERIOD)
+
+
+async def test_release_refunds_a_reservation() -> None:
+    settings = _settings()
+    settings.free_monthly_video_limit = 2
+    store = MemoryStore()
+    quota = QuotaService(settings, store)
+    decision = await quota.reserve_video("u1", "aaaaaaaaaaa", PERIOD)
+    assert decision.reason == "ok" and decision.used == 1
+    assert await quota.release_video("u1", "aaaaaaaaaaa", PERIOD) is True
+    # The slot is free again: two more reserves both fit under the limit of 2.
+    assert (await quota.reserve_video("u1", "aaaaaaaaaaa", PERIOD)).allowed
+    assert (await quota.reserve_video("u1", "bbbbbbbbbbb", PERIOD)).allowed
+    with pytest.raises(QuotaExceeded):
+        await quota.reserve_video("u1", "ccccccccccc", PERIOD)
+    # Releasing an unknown reservation is a no-op.
+    assert await quota.release_video("u1", "zzzzzzzzzzz", PERIOD) is False
 
 
 async def test_concurrent_video_reservations_cannot_exceed_limit() -> None:

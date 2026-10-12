@@ -132,10 +132,12 @@ def test_full_product_flow(tmp_path) -> None:
         me = client.get("/api/me", headers=headers).json()
         assert me["subscription"]["active"] is True
 
-        # ---- paid user is no longer limited
+        # ---- paid user gets the Pro monthly allowance
         assert client.post("/api/videos/process", json={"youtube_url": VIDEOS[2]}, headers=headers).status_code == 200
         me = client.get("/api/me", headers=headers).json()
-        assert me["usage"]["lifetime_videos"] == 2  # pro does not consume free slots
+        assert me["usage"]["plan"] == "pro"
+        assert me["usage"]["lifetime_videos"] == 3  # all three distinct videos remembered
+        assert me["usage"]["limit"] == _settings(tmp_path).pro_monthly_video_limit
 
         # ---- canonical cache: reprocessing is instant and does not re-hit the provider
         calls_before = fake_ai.models.copy()

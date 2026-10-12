@@ -181,6 +181,38 @@ class BillingService:
         )
         return {"ok": True, "subscription": subscription}
 
+    # ---------------------------------------------------------- reconcile
+    async def reconcile_order(self, order_id: str) -> dict[str, Any]:
+        """Server-side reconciliation: activate if Razorpay shows a captured payment.
+
+        Independent of the browser (used by the hosted page and as a safety net
+        when a webhook is missed). Idempotent.
+        """
+        order = await self.get_order(order_id)
+        user_id = (order.get("notes") or {}).get("user_id")
+        status = order.get("status")
+        if not user_id:
+            return {"ok": False, "status": status, "reason": "missing_user"}
+        if status != "paid":
+            return {"ok": False, "status": status, "reason": "not_paid"}
+        client = await self._ensure_client()
+        response = await client.get(f"/orders/{order_id}/payments")
+        payments = response.json().get("items", []) if response.status_code < 400 else []
+        captured = next((p for p in payments if p.get("status") == "captured"), None)
+        if not captured:
+            return {"ok": False, "status": status, "reason": "no_captured_payment"}
+        first_time = await self.store.mark_webhook_processed(
+            f"reconcile_{captured.get('id')}", "razorpay", "payment.captured"
+        )
+        if first_time:
+            await self._activate(
+                str(user_id),
+                payment_id=captured.get("id"),
+                subscription_id=None,
+                event="payment.reconciled",
+            )
+        return {"ok": True, "status": "paid", "activated": first_time}
+
     # -------------------------------------------------------------- webhook
     async def handle_webhook(self, raw_body: bytes, signature: str) -> dict[str, Any]:
         if not verify_webhook_signature(self.settings.razorpay_webhook_secret, raw_body, signature):
@@ -254,6 +286,7 @@ class BillingService:
                 "provider": "razorpay",
                 "provider_payment_id": payment_id,
                 "provider_subscription_id": subscription_id,
+                "current_period_start": datetime.now(timezone.utc).isoformat(),
                 "current_period_end": current_period_end
                 or _period_end(self.settings.razorpay_plan_period_days),
             },

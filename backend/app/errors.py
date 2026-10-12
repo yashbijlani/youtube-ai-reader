@@ -54,6 +54,11 @@ class TranscriptTooLarge(AppError):
         super().__init__("transcript_too_large", message, 413)
 
 
+class DurationLimitExceeded(AppError):
+    def __init__(self, message: str = "This video is longer than your plan allows.") -> None:
+        super().__init__("duration_limit", message, 402)
+
+
 class TranscriptProcessingError(AppError):
     def __init__(self, message: str = "The transcript could not be processed.") -> None:
         super().__init__("transcript_processing_error", message, 500)

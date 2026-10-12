@@ -252,8 +252,8 @@ class SupabaseStore(Store):
         user_id: str,
         video_id: str,
         *,
-        lifetime_limit: int,
-        monthly_limit: int,
+        free_monthly_limit: int,
+        pro_monthly_limit: int,
         period: str,
     ) -> dict[str, Any]:
         result = await self.client.rpc(
@@ -261,8 +261,8 @@ class SupabaseStore(Store):
             {
                 "p_user": user_id,
                 "p_video": video_id,
-                "p_lifetime_limit": lifetime_limit,
-                "p_monthly_limit": monthly_limit,
+                "p_free_monthly_limit": free_monthly_limit,
+                "p_pro_monthly_limit": pro_monthly_limit,
                 "p_period": period,
             },
         )
@@ -273,7 +273,17 @@ class SupabaseStore(Store):
             "used": int(row.get("used") or 0),
             "remaining": int(row.get("remaining") or 0),
             "limit": int(row.get("limit_value") if row.get("limit_value") is not None else -1),
+            "plan": row.get("plan") or "free",
         }
+
+    async def release_video_quota(self, user_id: str, video_id: str, period: str) -> bool:
+        result = await self.client.rpc(
+            "release_video_quota",
+            {"p_user": user_id, "p_video": video_id, "p_period": period},
+        )
+        if isinstance(result, list):
+            return bool(result[0]) if result else False
+        return bool(result)
 
     async def consume_chat_quota(
         self, user_id: str, *, monthly_limit: int, period: str

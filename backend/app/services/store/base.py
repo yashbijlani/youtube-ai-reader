@@ -95,15 +95,20 @@ class Store(ABC):
         user_id: str,
         video_id: str,
         *,
-        lifetime_limit: int,
-        monthly_limit: int,
+        free_monthly_limit: int,
+        pro_monthly_limit: int,
         period: str,
     ) -> dict[str, Any]:
-        """Atomically reserve one video for a free user.
+        """Atomically reserve one video for the user's current plan.
 
-        Returns ``{allowed, reason, used, remaining, limit}``. Active
-        subscribers are always allowed.
+        Returns ``{allowed, reason, used, remaining, limit, plan}``. Free and
+        active Pro users each have their own per-period limit.
         """
+        ...
+
+    @abstractmethod
+    async def release_video_quota(self, user_id: str, video_id: str, period: str) -> bool:
+        """Refund a reservation (used when processing fails). True if released."""
         ...
 
     @abstractmethod

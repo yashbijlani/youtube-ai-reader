@@ -33,7 +33,7 @@ from app.models.schemas import (
 )
 from app.services.billing import BillingService
 from app.services.metrics import metrics
-from app.services.quota import QuotaService
+from app.services.quota import QuotaReservation, QuotaService
 from app.services.rate_limit import limiter
 from app.services.usage import UsageStore
 from app.services.video_service import VideoService
@@ -63,6 +63,30 @@ def get_store(request: Request):
 
 def current_period() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m")
+
+
+def period_for(subscription: dict | None) -> str:
+    """Quota period key: anchored to the Pro cycle start, else calendar month."""
+    if subscription and subscription.get("status") == "ACTIVE":
+        start = subscription.get("current_period_start") or subscription.get("current_period_end")
+        if start:
+            try:
+                when = datetime.fromisoformat(str(start).replace("Z", "+00:00"))
+                return f"pro-{when.date().isoformat()}"
+            except ValueError:
+                pass
+        return "pro-current"
+    return current_period()
+
+
+def days_left(period_end: str | None) -> int | None:
+    if not period_end:
+        return None
+    try:
+        end = datetime.fromisoformat(str(period_end).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return max((end - datetime.now(timezone.utc)).days, 0)
 
 
 def verified_user_id(request: Request) -> str | None:
@@ -95,27 +119,57 @@ def enforce_free_limit(request: Request, video_id: str) -> None:
         raise FreeLimitReached(store.limit, remaining)
 
 
-async def enforce_video_quota(request: Request, video_id: str) -> None:
+async def refund_reservation(request: Request, reservation: "QuotaReservation | None") -> None:
+    """Release a reserved slot when a request fails synchronously."""
+    if reservation is None or not reservation.charged:
+        return
+    try:
+        quota = QuotaService(get_settings(request), get_store(request))
+        await quota.release_video(reservation.user_id, reservation.video_id, reservation.period)
+    except Exception:  # noqa: BLE001 - refund is best-effort
+        logger.warning("[quota] route refund failed", exc_info=True)
+
+
+async def enforce_video_quota(request: Request, video_id: str) -> "QuotaReservation | None":
     """Server-side quota enforcement.
 
-    Authenticated users are enforced from the database (atomic reservation).
-    Anonymous requests only occur in development (``AUTH_REQUIRED=false``) and
-    fall back to the legacy install-id limit.
+    Authenticated users are enforced from the database (atomic reservation) and
+    a refundable reservation is returned. Anonymous requests only occur in
+    development (``AUTH_REQUIRED=false``) and use the legacy install-id limit.
     """
     user_id = verified_user_id(request)
     if user_id:
         quota = QuotaService(get_settings(request), get_store(request))
-        await quota.reserve_video(user_id, video_id, current_period())
-        return
+        period = await billing_period(request, user_id)
+        decision = await quota.reserve_video(user_id, video_id, period)
+        return QuotaReservation(
+            user_id=user_id,
+            video_id=video_id,
+            period=period,
+            plan=decision.plan,
+            charged=decision.reason == "ok",
+            max_video_minutes=quota.max_video_minutes(decision.plan),
+        )
     enforce_free_limit(request, video_id)
     get_usage(request).record_video(install_id(request) or "", video_id)
+    return None
 
 
 async def enforce_chat_quota(request: Request) -> None:
     user_id = verified_user_id(request)
     if user_id:
         quota = QuotaService(get_settings(request), get_store(request))
-        await quota.reserve_chat(user_id, current_period())
+        period = await billing_period(request, user_id)
+        await quota.reserve_chat(user_id, period)
+
+
+async def billing_period(request: Request, user_id: str) -> str:
+    """Quota period key: anchored to the Pro cycle start, else calendar month."""
+    try:
+        subscription = await get_store(request).get_subscription(user_id)
+    except Exception:  # noqa: BLE001 - period must never break a request
+        subscription = None
+    return period_for(subscription)
 
 
 def client_ip(request: Request, settings: Settings) -> str:
@@ -162,43 +216,58 @@ async def _account_payload(request: Request) -> dict:
     store = get_store(request)
     settings = get_settings(request)
     user_id = verified_user_id(request)
-    period = current_period()
     if not user_id:
         return {
             "authenticated": False,
             "user": None,
             "subscription": None,
             "usage": {
-                "period": period,
+                "period": current_period(),
                 "videos_used": 0,
                 "chat_messages": 0,
                 "ai_cost_usd": 0.0,
                 "lifetime_videos": 0,
-                "free_limit": settings.free_video_limit,
+                "limit": settings.free_monthly_video_limit,
+                "remaining": settings.free_monthly_video_limit,
+                "plan": "free",
+                "free_limit": settings.free_monthly_video_limit,
                 "free_monthly_limit": settings.free_monthly_video_limit,
             },
         }
     user = await store.get_user(user_id) or await store.ensure_user(user_id)
     subscription = await store.get_subscription(user_id)
     used = await store.get_used_videos(user_id)
-    period_usage = await store.get_period_usage(user_id, period)
     status = (subscription or {}).get("status", "FREE")
+    plan = "pro" if status == "ACTIVE" else "free"
+    period = period_for(subscription)
+    period_usage = await store.get_period_usage(user_id, period)
+    limit = (
+        settings.pro_monthly_video_limit
+        if plan == "pro"
+        else settings.free_monthly_video_limit
+    )
+    videos_used = int(period_usage.get("videos_used", 0))
+    period_end = (subscription or {}).get("current_period_end")
     return {
         "authenticated": True,
-        "user": {"id": user_id, "email": (user or {}).get("email"), "plan": (user or {}).get("plan", "free")},
+        "user": {"id": user_id, "email": (user or {}).get("email"), "plan": plan},
         "subscription": {
             "status": status,
-            "plan": (subscription or {}).get("plan", "free"),
-            "current_period_end": (subscription or {}).get("current_period_end"),
+            "plan": plan,
+            "current_period_end": period_end,
+            "days_left": days_left(period_end),
             "active": status == "ACTIVE",
         },
         "usage": {
             "period": period,
-            "videos_used": int(period_usage.get("videos_used", 0)),
+            "videos_used": videos_used,
             "chat_messages": int(period_usage.get("chat_messages", 0)),
             "ai_cost_usd": float(period_usage.get("ai_cost_usd", 0.0)),
+            "limit": limit,
+            "remaining": max(limit - videos_used, 0),
+            "plan": plan,
             "lifetime_videos": len(used),
-            "free_limit": settings.free_video_limit,
+            "free_limit": settings.free_monthly_video_limit,
             "free_monthly_limit": settings.free_monthly_video_limit,
         },
     }
@@ -289,6 +358,12 @@ async def billing_verify_public(request: Request, payload: VerifyPaymentRequest)
     )
 
 
+@router.post("/billing/reconcile/{order_id}")
+async def billing_reconcile(request: Request, order_id: str) -> dict:
+    """Activate a paid order server-side (idempotent, no client signature needed)."""
+    return await get_billing(request).reconcile_order(order_id)
+
+
 @router.post("/billing/webhook")
 async def billing_webhook(request: Request) -> dict:
     """Razorpay webhook. Signature is verified against the raw request body."""
@@ -302,11 +377,15 @@ async def process_video(request: Request, payload: ProcessRequest) -> VideoState
     settings = get_settings(request)
     await enforce_rate(request, "process", settings.rate_limit_process_per_hour, 3600)
     video_id = extract_video_id(payload.youtube_url)
-    await enforce_video_quota(request, video_id)
+    quota = await enforce_video_quota(request, video_id)
     service = get_service(request)
-    state = await service.process(
-        payload.youtube_url, force=payload.force, user_id=current_user_id(request)
-    )
+    try:
+        state = await service.process(
+            payload.youtube_url, force=payload.force, user_id=current_user_id(request), quota=quota
+        )
+    except Exception:
+        await refund_reservation(request, quota)
+        raise
     return state
 
 
@@ -329,9 +408,13 @@ async def ingest_transcript(request: Request, video_id: str, payload: IngestRequ
     if not settings.trust_client_transcripts:
         raise Forbidden("This server does not accept client-supplied transcripts.")
     await enforce_rate(request, "process", settings.rate_limit_process_per_hour, 3600)
-    await enforce_video_quota(request, video_id)
+    quota = await enforce_video_quota(request, video_id)
     service = get_service(request)
-    state = await service.ingest(video_id, payload, user_id=current_user_id(request))
+    try:
+        state = await service.ingest(video_id, payload, user_id=current_user_id(request), quota=quota)
+    except Exception:
+        await refund_reservation(request, quota)
+        raise
     return state
 
 

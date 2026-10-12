@@ -13,6 +13,7 @@ from typing import Any
 from app.config import Settings
 from app.errors import (
     AIProviderNotConfigured,
+    DurationLimitExceeded,
     ProcessingInProgress,
     ServerBusy,
     TranscriptTooLarge,
@@ -81,6 +82,7 @@ class Job:
     started_at: float = field(default_factory=time.monotonic)
     finished_at: float | None = None
     task: asyncio.Task | None = None
+    quota: Any = None
 
     @property
     def finished(self) -> bool:
@@ -273,7 +275,12 @@ class VideoService:
     # ----------------------------------------------------------- process
 
     async def process(
-        self, youtube_url: str, *, force: bool = False, user_id: str | None = None
+        self,
+        youtube_url: str,
+        *,
+        force: bool = False,
+        user_id: str | None = None,
+        quota: Any = None,
     ) -> VideoState:
         video_id = extract_video_id(youtube_url)
         job = self.jobs.get(video_id)
@@ -317,6 +324,7 @@ class VideoService:
             stage=initial_stage,
             stage_message=STAGE_MESSAGES[initial_stage],
             analysis_status="pending",
+            quota=quota,
         )
         self.jobs[video_id] = job
         logger.info("[video] processing requested id=%s force=%s resume=%s", video_id, force, resume)
@@ -586,6 +594,7 @@ class VideoService:
                 meta, transcript, chunks, fetched = await self._ensure_transcript(
                     video_id, force, stage
                 )
+                self._check_duration(job, meta)
                 self._indexes[video_id] = ChunkIndex(chunks)
 
                 # Phase 1 complete: chat, transcript and chapters are usable now.
@@ -687,11 +696,44 @@ class VideoService:
                 job.stage_message = message
                 job.finished_at = time.monotonic()
                 logger.warning("[video] failed id=%s code=%s message=%s", video_id, code, message)
+                # The transcript never became usable: refund the reserved slot so a
+                # failed attempt does not consume the user's monthly quota.
+                await self._refund_quota(job)
             self._emit(
                 video_id,
                 {"type": "error", "code": code, "message": message,
                  "analysis_status": job.analysis_status},
             )
+
+    def _check_duration(self, job: Job, meta: VideoMeta) -> None:
+        reservation = job.quota
+        max_minutes = (
+            reservation.max_video_minutes if reservation is not None
+            else self.settings.free_max_video_minutes
+        )
+        if not max_minutes or not meta.duration:
+            return
+        if meta.duration > max_minutes * 60:
+            plan = reservation.plan if reservation is not None else "free"
+            upgrade = " Upgrade to Pro for videos up to 3 hours." if plan == "free" else ""
+            raise DurationLimitExceeded(
+                f"This video is about {int(meta.duration // 60)} minutes long. "
+                f"The {plan.capitalize()} plan supports videos up to {max_minutes} minutes.{upgrade}"
+            )
+
+    async def _release_reservation(self, reservation: Any, video_id: str) -> None:
+        if reservation is None or self.store is None or not getattr(reservation, "charged", False):
+            return
+        try:
+            await self.store.release_video_quota(
+                reservation.user_id, video_id, reservation.period
+            )
+            logger.info("[quota] refunded video=%s user=%s", video_id, reservation.user_id[:8])
+        except Exception:  # noqa: BLE001 - refund must never mask the real error
+            logger.warning("[quota] refund failed video=%s", video_id, exc_info=True)
+
+    async def _refund_quota(self, job: Job) -> None:
+        await self._release_reservation(job.quota, job.video_id)
 
     def _log_cost(self, video_id: str, started: float, before: dict[str, Any]) -> None:
         after = self.metrics.snapshot()
@@ -753,7 +795,11 @@ class VideoService:
     # -------------------------------------------------------------- ingest
 
     async def ingest(
-        self, video_id: str, request: IngestRequest, user_id: str | None = None
+        self,
+        video_id: str,
+        request: IngestRequest,
+        user_id: str | None = None,
+        quota: Any = None,
     ) -> VideoState:
         """Accept a transcript captured by the client (the user's own session)."""
         if not self.settings.ai_configured:
@@ -768,6 +814,19 @@ class VideoService:
         char_count = sum(len(segment.text) for segment in segments)
         if char_count > self.settings.max_transcript_chars:
             raise TranscriptTooLarge()
+
+        max_minutes = (
+            quota.max_video_minutes if quota is not None
+            else self.settings.free_max_video_minutes
+        )
+        if max_minutes and request.duration and request.duration > max_minutes * 60:
+            plan = quota.plan if quota is not None else "free"
+            await self._release_reservation(quota, video_id)
+            upgrade = " Upgrade to Pro for videos up to 3 hours." if plan == "free" else ""
+            raise DurationLimitExceeded(
+                f"This video is about {int(request.duration // 60)} minutes long. "
+                f"The {plan.capitalize()} plan supports videos up to {max_minutes} minutes.{upgrade}"
+            )
 
         title = (request.title or "").strip()
         channel = request.channel
@@ -835,6 +894,7 @@ class VideoService:
             stage="chat_ready",
             stage_message=STAGE_MESSAGES["chat_ready"],
             analysis_status="pending",
+            quota=quota,
         )
         self.jobs[video_id] = job
         job.task = asyncio.create_task(self._run_job(job, force=False))

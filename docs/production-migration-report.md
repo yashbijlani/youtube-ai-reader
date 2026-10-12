@@ -137,10 +137,13 @@ self-healed on read. A duplicate webhook returns `{duplicate: true}`.
 
 ## 8. Quota model
 
-- Free users: `FREE_VIDEO_LIMIT` lifetime distinct videos and
-  `FREE_MONTHLY_VIDEO_LIMIT` per calendar month; `FREE_MONTHLY_CHAT_LIMIT` chat
-  messages/month.
-- `ACTIVE` subscriptions bypass free limits (fair-use bounds are simple guards).
+- Free users: `FREE_MONTHLY_VIDEO_LIMIT` videos per calendar month, each up to
+  `FREE_MAX_VIDEO_MINUTES`; `FREE_MONTHLY_CHAT_LIMIT` chat messages/month.
+- Pro (`ACTIVE` subscription): `PRO_MONTHLY_VIDEO_LIMIT` videos per billing
+  cycle, each up to `PRO_MAX_VIDEO_MINUTES`; the cycle is anchored to the
+  purchase date (`current_period_start`).
+- Failed processing refunds the reserved slot (`release_video_quota`), so a
+  failed attempt does not consume quota.
 - Consumption is atomic in Postgres (`consume_video_quota`,
   `consume_chat_quota`), locking the user row so concurrent requests cannot race
   past the last slot. The concurrency test proves 10 parallel requests yield

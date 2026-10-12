@@ -121,42 +121,62 @@ class MemoryStore(Store):
         user_id: str,
         video_id: str,
         *,
-        lifetime_limit: int,
-        monthly_limit: int,
+        free_monthly_limit: int,
+        pro_monthly_limit: int,
         period: str,
     ) -> dict[str, Any]:
         async with self._lock(user_id):
-            if self._is_pro(user_id):
-                return {"allowed": True, "reason": "pro", "used": 0, "remaining": -1, "limit": -1}
+            pro = self._is_pro(user_id)
+            plan = "pro" if pro else "free"
+            limit = pro_monthly_limit if pro else free_monthly_limit
             if not self.users.get(user_id):
                 self.users[user_id] = {"id": user_id, "plan": "free", "created_at": _now(), "updated_at": _now()}
             used = self.used_videos[user_id]
-            lifetime = len(used)
+            period_row = self.periods.setdefault(
+                (user_id, period), {"videos_used": 0, "chat_messages": 0, "ai_cost_usd": 0.0}
+            )
+            month = period_row["videos_used"]
             if video_id in used:
                 return {
                     "allowed": True,
                     "reason": "already_used",
-                    "used": lifetime,
-                    "remaining": max(lifetime_limit - lifetime, 0),
-                    "limit": lifetime_limit,
+                    "used": month,
+                    "remaining": max(limit - month, 0),
+                    "limit": limit,
+                    "plan": plan,
                 }
-            if lifetime >= lifetime_limit:
-                return {"allowed": False, "reason": "lifetime_limit", "used": lifetime, "remaining": 0, "limit": lifetime_limit}
-            period_row = self.periods.setdefault(
-                (user_id, period), {"videos_used": 0, "chat_messages": 0, "ai_cost_usd": 0.0}
-            )
-            if period_row["videos_used"] >= monthly_limit:
-                return {"allowed": False, "reason": "monthly_limit", "used": lifetime, "remaining": 0, "limit": monthly_limit}
+            if month >= limit:
+                return {
+                    "allowed": False,
+                    "reason": "monthly_limit",
+                    "used": month,
+                    "remaining": 0,
+                    "limit": limit,
+                    "plan": plan,
+                }
             used.add(video_id)
             period_row["videos_used"] += 1
             period_row["updated_at"] = _now()
             return {
                 "allowed": True,
                 "reason": "ok",
-                "used": lifetime + 1,
-                "remaining": max(lifetime_limit - (lifetime + 1), 0),
-                "limit": lifetime_limit,
+                "used": month + 1,
+                "remaining": max(limit - (month + 1), 0),
+                "limit": limit,
+                "plan": plan,
             }
+
+    async def release_video_quota(self, user_id: str, video_id: str, period: str) -> bool:
+        async with self._lock(user_id):
+            used = self.used_videos.get(user_id)
+            if not used or video_id not in used:
+                return False
+            used.discard(video_id)
+            row = self.periods.get((user_id, period))
+            if row is not None:
+                row["videos_used"] = max(int(row.get("videos_used", 0)) - 1, 0)
+                row["updated_at"] = _now()
+            return True
 
     async def consume_chat_quota(
         self, user_id: str, *, monthly_limit: int, period: str

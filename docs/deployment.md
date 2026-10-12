@@ -132,7 +132,7 @@ Checklist:
 - [ ] `/api/me` returns account + usage for a signed-in user
 - [ ] Processing a video persists rows in `videos`/`transcripts`/`ai_usage`
 - [ ] A second user opening the same video is served from the canonical store
-- [ ] Free quota blocks the 4th distinct video with `quota_exceeded`
+- [ ] Free quota blocks the 4th video in a month with `quota_exceeded`
 - [ ] Razorpay test payment activates `subscriptions.status = ACTIVE`
 - [ ] Webhook retries are idempotent (no duplicate activation)
 - [ ] SSE chat streams through Cloudflare
