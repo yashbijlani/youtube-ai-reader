@@ -7,6 +7,8 @@
  * Differences from the dev build:
  *   - drops localhost/127.0.0.1 host permissions (unused in production and
  *     flagged by reviewers);
+ *   - removes the `key` field (only valid for unpacked local dev; the Web Store
+ *     rejects packages that contain it);
  *   - writes the sanitized manifest into a clean `store/` copy of `dist/`;
  *   - zips it as `store/youtube-ai-reader-<version>.zip` (manifest at the root).
  */
@@ -31,6 +33,7 @@ const manifest = JSON.parse(readFileSync(join(dist, "manifest.json"), "utf8"));
 manifest.host_permissions = (manifest.host_permissions ?? []).filter(
   (host) => !DEV_HOST_PERMISSIONS.has(host),
 );
+delete manifest.key;
 
 rmSync(store, { recursive: true, force: true });
 mkdirSync(store, { recursive: true });
