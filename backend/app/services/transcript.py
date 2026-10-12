@@ -108,6 +108,10 @@ class TranscriptProvider(ABC):
     async def fetch(self, video_id: str) -> TranscriptResult:
         ...
 
+    async def fetch_oembed_metadata(self, video_id: str) -> VideoMeta | None:
+        """Best-effort public metadata (title/channel/thumbnail) without yt-dlp."""
+        return None
+
 
 class TranscriptUnavailableProvider(TranscriptProvider):
     """Explicit no-op provider; useful for tests and future pipeline swaps."""
@@ -124,6 +128,10 @@ class YtDlpTranscriptProvider(TranscriptProvider):
         )
 
     # ------------------------------------------------------------- public
+
+    async def fetch_oembed_metadata(self, video_id: str) -> VideoMeta | None:
+        """Public oEmbed metadata (title/channel/thumbnail); no yt-dlp involved."""
+        return await self._fallback_metadata(video_id)
 
     async def fetch(self, video_id: str) -> TranscriptResult:
         url = canonical_watch_url(video_id)

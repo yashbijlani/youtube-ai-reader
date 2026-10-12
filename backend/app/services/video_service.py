@@ -324,15 +324,15 @@ class VideoService:
         return self._state_from_job(job)
 
     def _cache_current(self, video_id: str) -> bool:
-        """A cached entry is only reusable if it is the current version and has a
-        trustworthy title (missing/placeholder titles indicate bad data)."""
+        """A cached entry is reusable when it is the current cache version.
+
+        The title is intentionally *not* required: a transcript ingested from the
+        client may legitimately carry a placeholder title, and discarding it would
+        force an unnecessary server yt-dlp fallback (which fails on datacenter
+        hosts). Old/wrong entries are still invalidated by the cache version.
+        """
         raw = self.cache.read_json(video_id, "metadata")
-        if not isinstance(raw, dict):
-            return False
-        if raw.get("cache_version") != self.settings.cache_version:
-            return False
-        title = raw.get("title")
-        return bool(title) and title != "Untitled video"
+        return isinstance(raw, dict) and raw.get("cache_version") == self.settings.cache_version
 
     def _meta_dict(self, meta: VideoMeta) -> dict[str, Any]:
         return {**meta.model_dump(), "cache_version": self.settings.cache_version}
@@ -386,9 +386,6 @@ class VideoService:
             return False
         bundle_meta = bundle.get("metadata") or {}
         if bundle_meta.get("cache_version") != self.settings.cache_version:
-            return False
-        title = bundle_meta.get("title")
-        if not title or title == "Untitled video":
             return False
         if bundle.get("metadata"):
             self.cache.write_json(video_id, "metadata", bundle["metadata"])
@@ -772,11 +769,20 @@ class VideoService:
         if char_count > self.settings.max_transcript_chars:
             raise TranscriptTooLarge()
 
+        title = (request.title or "").strip()
+        channel = request.channel
+        if not title or title == "Untitled video":
+            # Best-effort public title so a client ingest never persists a
+            # placeholder (oEmbed is not subject to the yt-dlp bot check).
+            oembed = await self.transcript_provider.fetch_oembed_metadata(video_id)
+            if oembed is not None:
+                title = title or (oembed.title or "").strip()
+                channel = channel or oembed.channel
         meta = VideoMeta(
             video_id=video_id,
             url=canonical_watch_url(video_id),
-            title=(request.title or "Untitled video")[:500],
-            channel=request.channel,
+            title=(title or "Untitled video")[:500],
+            channel=channel,
             duration=request.duration,
             language=request.language,
             subtitle_kind=request.kind,
