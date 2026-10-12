@@ -114,6 +114,9 @@ export interface UsageInfo {
   limit: number;
   paid: boolean;
   remaining: number;
+  /** Days left in the current Pro cycle (null for free accounts). */
+  daysLeft?: number | null;
+  plan?: string;
 }
 
 export interface AccountInfo {
@@ -123,6 +126,7 @@ export interface AccountInfo {
     status: string;
     plan: string;
     current_period_end?: string | null;
+    days_left?: number | null;
     active: boolean;
   } | null;
   usage: {
@@ -131,6 +135,9 @@ export interface AccountInfo {
     chat_messages: number;
     ai_cost_usd: number;
     lifetime_videos: number;
+    limit: number;
+    remaining: number;
+    plan: string;
     free_limit: number;
     free_monthly_limit: number;
   };
@@ -190,6 +197,7 @@ export type PanelToBackground =
 export interface ClientTranscriptPayload {
   videoId: string;
   title?: string;
+  duration?: number;
   language: string;
   kind: "manual" | "auto";
   format: "json3" | "segments";

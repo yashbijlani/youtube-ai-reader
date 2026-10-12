@@ -9,6 +9,7 @@ export interface EntitlementController {
   used: number;
   limit: number;
   remaining: number;
+  daysLeft: number | null;
   loading: boolean;
   error: string | null;
   refresh: () => Promise<AccountInfo | null>;
@@ -17,7 +18,7 @@ export interface EntitlementController {
   manage: () => void;
 }
 
-const FREE_DEFAULT: UsageInfo = { used: 0, limit: 3, paid: false, remaining: 3 };
+const FREE_DEFAULT: UsageInfo = { used: 0, limit: 3, paid: false, remaining: 3, daysLeft: null };
 
 /**
  * Entitlement is authoritative on the backend (`GET /me`). Upgrades go through
@@ -75,10 +76,12 @@ export function useEntitlement(apiBaseUrl: string): EntitlementController {
 
   const usage: UsageInfo = account
     ? {
-        used: account.usage.lifetime_videos,
-        limit: account.usage.free_limit,
+        used: account.usage.videos_used,
+        limit: account.usage.limit,
         paid: account.subscription?.active ?? false,
-        remaining: Math.max(account.usage.free_limit - account.usage.lifetime_videos, 0),
+        remaining: account.usage.remaining,
+        daysLeft: account.subscription?.days_left ?? null,
+        plan: account.usage.plan,
       }
     : FREE_DEFAULT;
 
@@ -87,6 +90,7 @@ export function useEntitlement(apiBaseUrl: string): EntitlementController {
     used: usage.used,
     limit: usage.limit,
     remaining: usage.remaining,
+    daysLeft: usage.daysLeft ?? null,
     loading,
     error,
     refresh,

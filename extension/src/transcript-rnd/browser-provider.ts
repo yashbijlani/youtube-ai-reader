@@ -32,6 +32,7 @@ export interface BrowserTranscriptResult {
   json3: string | null;
   language: string | null;
   title: string | null;
+  duration: number | null;
   captionTracks: CaptionTrackInfo | null;
   latencyMs: number;
   sourceInfo: Record<string, unknown>;
@@ -197,6 +198,7 @@ export class BrowserTranscriptProvider {
           json3: capture.text,
           language: tracks?.picked?.languageCode ?? null,
           title: title || null,
+          duration: duration > 0 ? duration : null,
           captionTracks: tracks,
           latencyMs: this.now() - started,
           sourceInfo: { via: capture.via, hasPot: capture.hasPot, bytes: capture.bytes },
@@ -220,6 +222,7 @@ export class BrowserTranscriptProvider {
         json3: null,
         language: tracks?.picked?.languageCode ?? null,
         title: title || null,
+        duration: duration > 0 ? duration : null,
         captionTracks: tracks,
         latencyMs: this.now() - started,
         sourceInfo: { samples: panel.length, via: "transcript_panel" },
@@ -242,6 +245,7 @@ export class BrowserTranscriptProvider {
         json3: null,
         language: tracks?.picked?.languageCode ?? null,
         title: title || null,
+        duration: duration > 0 ? duration : null,
         captionTracks: tracks,
         latencyMs: this.now() - started,
         sourceInfo: { samples: dom.length, lossy: true },
@@ -257,6 +261,7 @@ export function toClientPayload(result: BrowserTranscriptResult, videoId = "") {
   return {
     videoId,
     title: result.title ?? undefined,
+    duration: result.duration ?? undefined,
     language: result.language ?? "en",
     kind: result.captionTracks?.picked?.kind === "asr" ? ("auto" as const) : ("manual" as const),
     format: result.json3 ? ("json3" as const) : ("segments" as const),

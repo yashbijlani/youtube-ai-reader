@@ -33,6 +33,8 @@ function hintFor(code: string): string | null {
       return "Wait a little before processing more videos.";
     case "ytdlp_failure":
       return "We couldn't read this video on our servers. Click Try again — reading usually works from your browser.";
+    case "duration_limit":
+      return "This video is longer than your plan allows. Free supports up to 60 minutes; Pro supports up to 3 hours.";
     default:
       return null;
   }

@@ -9,6 +9,7 @@ interface AccountMenuProps {
     used: number;
     limit: number;
     remaining: number;
+    daysLeft?: number | null;
     onUpgrade: () => void;
   };
 }
@@ -66,9 +67,10 @@ export function AccountMenu({ auth, plan }: AccountMenuProps) {
                   {plan.paid ? "Pro" : "Free"}
                 </span>
                 <span className="muted small">
-                  {plan.paid
-                    ? "Unlimited videos"
-                    : `${plan.remaining} of ${plan.limit} free videos remaining`}
+                  {`${plan.remaining} of ${plan.limit} videos left this month`}
+                  {plan.paid && typeof plan.daysLeft === "number"
+                    ? ` · ${plan.daysLeft} day${plan.daysLeft === 1 ? "" : "s"} left`
+                    : ""}
                 </span>
               </div>
               {!plan.paid ? (

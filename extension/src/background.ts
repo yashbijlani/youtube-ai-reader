@@ -459,14 +459,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 /**
- * Enable the action only on YouTube (greyed + tooltip elsewhere). The side
- * panel itself stays enabled on every tab so an already-open panel remains
- * closable; the panel renders a "turned off" message off-YouTube instead.
+ * Enable the action and side panel only on YouTube. On other tabs the side panel
+ * is disabled, so Chrome closes/hides it there and it can't be opened off-YouTube
+ * (previously it lingered on every tab, needing to be closed repeatedly).
  */
 function configureTab(tabId: number, url: string | null | undefined): void {
   const youtube = isYouTubeUrl(url ?? "");
   chrome.sidePanel
-    .setOptions({ tabId, path: PANEL_PATH, enabled: true })
+    .setOptions({ tabId, path: PANEL_PATH, enabled: youtube })
     .catch(() => undefined);
   if (youtube) {
     chrome.action.enable(tabId).catch(() => undefined);

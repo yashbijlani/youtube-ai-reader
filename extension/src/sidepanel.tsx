@@ -279,6 +279,7 @@ function App() {
                 used: entitlement.used,
                 limit: entitlement.limit,
                 remaining: entitlement.remaining,
+                daysLeft: entitlement.daysLeft,
                 onUpgrade: entitlement.openPayment,
               }}
             />
