@@ -32,7 +32,7 @@ function hintFor(code: string): string | null {
     case "rate_limited":
       return "Wait a little before processing more videos.";
     case "ytdlp_failure":
-      return "The video service failed. Update yt-dlp or try again in a moment.";
+      return "We couldn't read this video on our servers. Click Try again — reading usually works from your browser.";
     default:
       return null;
   }

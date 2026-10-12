@@ -81,19 +81,20 @@ export async function triggerCaptionRequest(prefLang = "en"): Promise<CaptionTra
   } catch {
     /* ignore */
   }
-  await wait(60);
+  await wait(80);
   const button = document.querySelector(".ytp-subtitles-button") as HTMLElement | null;
+  const pressState = () => button?.getAttribute("aria-pressed");
   const click = () => button?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  // Toggling CC is what forces a *fresh* signed caption request after the
-  // interceptor is installed. Never leave captions off: if they are already on,
-  // toggle off then back on so a new request still fires and ends enabled.
-  if (button?.getAttribute("aria-pressed") === "true") {
+  // Toggling CC forces a *fresh* signed caption request after the interceptor is
+  // installed. If captions are already on, toggle off then on; otherwise just
+  // turn them on. Always finish by verifying they are ON.
+  if (pressState() === "true") {
     click();
-    await wait(140);
-    click();
-  } else {
-    click();
+    await wait(160);
   }
+  click();
+  await wait(160);
+  if (pressState() === "false") click();
   try {
     p?.playVideo?.();
   } catch {
@@ -200,6 +201,16 @@ export function getMediaDuration(): number {
   const video = document.querySelector("video");
   const duration = video?.duration;
   return typeof duration === "number" && Number.isFinite(duration) && duration > 0 ? duration : 0;
+}
+
+/** Video title from the player response (MAIN world, self-contained). */
+export function getVideoTitle(): string {
+  const p = document.querySelector("#movie_player") as PlayerLike | null;
+  const pr =
+    (p && typeof p.getPlayerResponse === "function" ? p.getPlayerResponse() : undefined) ||
+    (window as unknown as { ytInitialPlayerResponse?: ReturnType<NonNullable<PlayerLike["getPlayerResponse"]>> })
+      .ytInitialPlayerResponse;
+  return String(pr?.videoDetails?.title || "").trim();
 }
 
 /**

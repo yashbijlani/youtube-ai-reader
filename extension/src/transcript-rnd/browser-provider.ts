@@ -13,7 +13,7 @@
 
 import { pageInterceptor, type PageInterceptorConfig } from "./page-interceptor";
 import { parseJson3, normalizeSegments, type RawSegment } from "./parseJson3";
-import { captureDomCaptions, captureTranscriptPanel, getMediaDuration, inspectCaptionTracks, triggerCaptionRequest, type CaptionTrackInfo } from "./methods";
+import { captureDomCaptions, captureTranscriptPanel, getMediaDuration, getVideoTitle, inspectCaptionTracks, triggerCaptionRequest, type CaptionTrackInfo } from "./methods";
 import type { ExtractionMethod } from "./types";
 
 interface RawCapture {
@@ -31,6 +31,7 @@ export interface BrowserTranscriptResult {
   segments: RawSegment[];
   json3: string | null;
   language: string | null;
+  title: string | null;
   captionTracks: CaptionTrackInfo | null;
   latencyMs: number;
   sourceInfo: Record<string, unknown>;
@@ -133,6 +134,9 @@ export class BrowserTranscriptProvider {
     const duration = await this.scripting
       .evaluateMainWorld<number>(tabId, getMediaDuration as (...a: never[]) => number, [])
       .catch(() => 0);
+    const title = await this.scripting
+      .evaluateMainWorld<string>(tabId, getVideoTitle as (...a: never[]) => string, [])
+      .catch(() => "");
     await this.scripting.evaluateMainWorld(tabId, triggerCaptionRequest as unknown as (...a: never[]) => CaptionTrackInfo, [prefLang]);
 
     // Poll for the caption response, retriggering the player a couple of times
@@ -192,6 +196,7 @@ export class BrowserTranscriptProvider {
           segments,
           json3: capture.text,
           language: tracks?.picked?.languageCode ?? null,
+          title: title || null,
           captionTracks: tracks,
           latencyMs: this.now() - started,
           sourceInfo: { via: capture.via, hasPot: capture.hasPot, bytes: capture.bytes },
@@ -214,6 +219,7 @@ export class BrowserTranscriptProvider {
         segments: panel.map((d) => ({ start: d.start, end: d.start, text: d.text })),
         json3: null,
         language: tracks?.picked?.languageCode ?? null,
+        title: title || null,
         captionTracks: tracks,
         latencyMs: this.now() - started,
         sourceInfo: { samples: panel.length, via: "transcript_panel" },
@@ -235,6 +241,7 @@ export class BrowserTranscriptProvider {
         segments: dom.map((d) => ({ start: d.start, end: d.start, text: d.text })),
         json3: null,
         language: tracks?.picked?.languageCode ?? null,
+        title: title || null,
         captionTracks: tracks,
         latencyMs: this.now() - started,
         sourceInfo: { samples: dom.length, lossy: true },
@@ -249,6 +256,7 @@ export class BrowserTranscriptProvider {
 export function toClientPayload(result: BrowserTranscriptResult, videoId = "") {
   return {
     videoId,
+    title: result.title ?? undefined,
     language: result.language ?? "en",
     kind: result.captionTracks?.picked?.kind === "asr" ? ("auto" as const) : ("manual" as const),
     format: result.json3 ? ("json3" as const) : ("segments" as const),

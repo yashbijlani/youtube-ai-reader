@@ -189,6 +189,7 @@ export type PanelToBackground =
 
 export interface ClientTranscriptPayload {
   videoId: string;
+  title?: string;
   language: string;
   kind: "manual" | "auto";
   format: "json3" | "segments";

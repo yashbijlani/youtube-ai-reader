@@ -177,7 +177,16 @@ function pendingPayload(tabId: number, videoId: string): ClientTranscriptPayload
 // and one video's request never returns another video's capture.
 const extractionInflight: Record<string, Promise<TranscriptExtractionResult>> = {};
 
-function extractAndStore(tabId: number, videoId: string): Promise<TranscriptExtractionResult> {
+interface ExtractTiming {
+  interceptTimeoutMs?: number;
+  domFallbackMs?: number;
+}
+
+function extractAndStore(
+  tabId: number,
+  videoId: string,
+  timing: ExtractTiming = {},
+): Promise<TranscriptExtractionResult> {
   const inflightKey = `${tabId}:${videoId}`;
   const existing = extractionInflight[inflightKey];
   if (existing) return existing;
@@ -186,8 +195,8 @@ function extractAndStore(tabId: number, videoId: string): Promise<TranscriptExtr
       const result = await browserProvider.extract(tabId, {
         prefLang: "en",
         videoId,
-        interceptTimeoutMs: 20000,
-        domFallbackMs: 8000,
+        interceptTimeoutMs: timing.interceptTimeoutMs ?? 15000,
+        domFallbackMs: timing.domFallbackMs ?? 8000,
       });
       if (!result) {
         console.log("[yair] no browser captions found; server fallback will handle it");
@@ -207,9 +216,24 @@ function extractAndStore(tabId: number, videoId: string): Promise<TranscriptExtr
   return task;
 }
 
-// Clear the page-visible capture buffer when the video changes so a previous
-// video's (possibly larger) captions can't be picked up for the new video.
-const RESET_PAGE_CAPTURES = (): void => {
+// Drop page-visible captures that belong to a *different* video, keeping any
+// that already arrived for the requested one. Clearing everything on navigation
+// could wipe a capture that landed just after the URL changed.
+const RESET_PAGE_CAPTURES = (videoId: string): void => {
+  try {
+    const w = window as unknown as {
+      __yairCaptured?: Array<{ videoId?: string; pageVideoId?: string }>;
+    };
+    w.__yairCaptured = (w.__yairCaptured || []).filter(
+      (c) => c && (c.videoId === videoId || c.pageVideoId === videoId),
+    );
+  } catch {
+    /* ignore */
+  }
+};
+
+/** Hard-reset the capture buffer (used before a fresh retry pass). */
+const RESET_ALL_CAPTURES = (): void => {
   try {
     (window as unknown as { __yairCaptured?: unknown[] }).__yairCaptured = [];
   } catch {
@@ -217,12 +241,25 @@ const RESET_PAGE_CAPTURES = (): void => {
   }
 };
 
-async function clearPageCaptures(tabId: number): Promise<void> {
+async function clearPageCaptures(tabId: number, videoId = ""): Promise<void> {
   try {
     await chrome.scripting.executeScript({
       target: { tabId },
       world: "MAIN",
       func: RESET_PAGE_CAPTURES,
+      args: [videoId],
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
+async function clearAllPageCaptures(tabId: number): Promise<void> {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      world: "MAIN",
+      func: RESET_ALL_CAPTURES,
     });
   } catch {
     /* ignore */
@@ -302,7 +339,7 @@ async function handle(
       if (!message.video) ctx.playbackSeconds = null;
       ctx.updatedAt = Date.now();
       delete pendingCaptures[tabId];
-      void clearPageCaptures(tabId);
+      void clearPageCaptures(tabId, message.video?.videoId ?? "");
       broadcast(tabId, null);
       if (message.video) scheduleExtraction(tabId, message.video.videoId);
       return { ok: true };
@@ -368,13 +405,29 @@ async function handle(
         await storeClientTranscript(message.videoId, bridged);
         return { status: "ok", payload: bridged } satisfies TranscriptExtractionResult;
       }
-      const result = await extractAndStore(tabId, message.videoId);
+      let result = await extractAndStore(tabId, message.videoId);
       if (result.status !== "ok") {
         // Bridge may have arrived while the scripting path was polling.
         const late = pendingPayload(tabId, message.videoId);
         if (late) {
           await storeClientTranscript(message.videoId, late);
           return { status: "ok", payload: late } satisfies TranscriptExtractionResult;
+        }
+        // Retry once with a clean buffer and fresh triggers before ever falling
+        // back to the server. This is the safety net for an unlucky first pass.
+        console.warn("[yair] first capture pass found nothing; retrying browser capture");
+        await clearAllPageCaptures(tabId);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        result = await extractAndStore(tabId, message.videoId, {
+          interceptTimeoutMs: 12000,
+          domFallbackMs: 6000,
+        });
+        if (result.status !== "ok") {
+          const late2 = pendingPayload(tabId, message.videoId);
+          if (late2) {
+            await storeClientTranscript(message.videoId, late2);
+            return { status: "ok", payload: late2 } satisfies TranscriptExtractionResult;
+          }
         }
       }
       return result;

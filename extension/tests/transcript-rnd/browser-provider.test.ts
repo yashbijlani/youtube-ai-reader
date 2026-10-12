@@ -114,6 +114,7 @@ describe("BrowserTranscriptProvider", () => {
         segments: [{ start: 0, end: 1, text: "hi" }],
         json3: JSON3,
         language: "en",
+        title: "A title",
         captionTracks: TRACKS,
         latencyMs: 1,
         sourceInfo: {},

@@ -554,8 +554,8 @@ def _map_ytdlp_error(stderr: str) -> Exception:
         return YouTubeRateLimited()
     if any(marker in lowered for marker in _BOT_CHECK_MARKERS):
         return YtDlpFailure(
-            "YouTube blocked the request from this server (bot check). "
-            "Try again later, set YTDLP_COOKIES_FILE, or update yt-dlp."
+            "We couldn't load this video's transcript on our servers right now. "
+            "Please try again — reading usually works from your browser."
         )
     if any(marker in lowered for marker in _AGE_MARKERS):
         return AgeRestricted()
@@ -563,5 +563,12 @@ def _map_ytdlp_error(stderr: str) -> Exception:
         return VideoUnavailable("This video is private.")
     if any(marker in lowered for marker in _UNAVAILABLE_MARKERS):
         return VideoUnavailable()
-    tail = message.splitlines()[-1] if message else "yt-dlp failed"
-    return YtDlpFailure(f"Couldn't fetch this video: {tail[:200]}")
+    if "player response" in lowered or "unable to extract" in lowered:
+        return YtDlpFailure(
+            "We couldn't read this video on our servers. Please try again — "
+            "reading usually works from your browser."
+        )
+    return YtDlpFailure(
+        "We couldn't load this video's transcript on our servers. "
+        "Please try again — reading usually works from your browser."
+    )

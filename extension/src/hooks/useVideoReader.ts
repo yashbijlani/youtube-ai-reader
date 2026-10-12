@@ -87,7 +87,7 @@ export function useVideoReader(
           if (client) {
             try {
               const next = await api.ingest(apiBaseUrl, video.videoId, {
-                title: video.title,
+                title: client.title ?? video.title,
                 channel: video.channel,
                 duration: video.duration,
                 language: client.language,
